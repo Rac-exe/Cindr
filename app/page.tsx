@@ -76,7 +76,7 @@ export default function LandingPage() {
       {/* Cinematic decorations spread across the whole page */}
       <div className="pointer-events-none absolute inset-0 text-[#F0642F] drop-shadow-[0_0_4px_rgba(216,90,48,0.8)] drop-shadow-[0_0_12px_rgba(216,90,48,0.45)]">
         {/* Film reels */}
-        <FilmReel className="absolute -top-6 -right-6 w-44 h-44 opacity-85 sm:w-52 sm:h-52" />
+        <FilmReel className="absolute -top-10 -right-16 w-44 h-44 opacity-80 sm:-top-6 sm:-right-6 sm:w-52 sm:h-52 sm:opacity-85" />
         <FilmReel className="absolute -bottom-10 -left-10 w-40 h-40 opacity-75" />
         <FilmReel className="absolute top-[55%] right-[8%] w-24 h-24 opacity-60 hidden md:block" />
         <FilmReel className="absolute top-[20%] left-[5%] w-20 h-20 opacity-55 hidden md:block" />
@@ -117,7 +117,7 @@ export default function LandingPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/auth/login"
-            className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+            className="rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-2 text-sm font-medium text-white/90 shadow-[0_0_18px_rgba(0,0,0,0.25)] backdrop-blur-sm transition-colors hover:border-white/20 hover:bg-white/[0.1] hover:text-white"
           >
             Log in
           </Link>
@@ -167,7 +167,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-2xl w-full">
+        <div className="mt-14 grid w-full max-w-2xl grid-cols-1 gap-3 sm:mt-20 sm:grid-cols-3 sm:gap-5">
           <Feature
             icon={
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -217,14 +217,17 @@ function Feature({
   description: string;
 }) {
   return (
-    <div className="group p-5 rounded-xl border border-[var(--border-color)] bg-[var(--surface)]/80 backdrop-blur-sm hover:border-[var(--color-cindr)]/30 transition-all">
-      <div className="w-9 h-9 rounded-lg bg-[var(--color-cindr)]/10 flex items-center justify-center text-[var(--color-cindr)] mb-3">
+    <div className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-white/10 bg-[#151419]/85 p-4 text-left shadow-[0_18px_45px_rgba(0,0,0,0.22)] backdrop-blur-sm transition-all hover:border-[var(--color-cindr)]/35 sm:block sm:p-5 sm:text-center">
+      <div className="absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-[var(--color-cindr)]/55 to-transparent sm:inset-x-8" />
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--color-cindr)]/20 bg-[var(--color-cindr)]/10 text-[var(--color-cindr)] shadow-[0_0_22px_rgba(216,90,48,0.14)] sm:mx-auto sm:mb-4">
         {icon}
       </div>
-      <h3 className="text-sm font-semibold mb-1.5">{title}</h3>
-      <p className="text-xs text-[var(--muted)] leading-relaxed">
-        {description}
-      </p>
+      <div>
+        <h3 className="mb-1.5 text-sm font-semibold">{title}</h3>
+        <p className="text-xs leading-relaxed text-[var(--muted)]">
+          {description}
+        </p>
+      </div>
     </div>
   );
 }
