@@ -10,15 +10,13 @@ export interface QuizQuestion {
   multi?: boolean;
 }
 
-// Content types the user can pick (multi-select)
 export const CONTENT_TYPES: QuizOption[] = [
   { label: "Movies", value: "movies" },
   { label: "TV Shows & Series", value: "series" },
-  { label: "Short Films", value: "short" },
+  { label: "Anime", value: "anime" },
   { label: "Documentaries", value: "documentaries" },
 ];
 
-// Questions specific to each content type
 const MOVIE_QUESTIONS: QuizQuestion[] = [
   {
     id: "movie_mood",
@@ -55,19 +53,35 @@ const SERIES_QUESTIONS: QuizQuestion[] = [
       { label: "Sitcoms & feel-good shows", value: "comedy" },
       { label: "Sci-fi & fantasy worlds", value: "scifi_fantasy" },
       { label: "Reality & competition shows", value: "reality" },
-      { label: "Anime", value: "anime" },
+      { label: "K-dramas & international", value: "international" },
     ],
     multi: true,
   },
   {
-    id: "series_length",
-    question: "How deep do you want to go?",
+    id: "series_commitment",
+    question: "What kind of commitment sounds right?",
     options: [
-      { label: "Mini-series (one season)", value: "mini" },
-      { label: "A few seasons to explore", value: "medium" },
-      { label: "Long-running epics", value: "long" },
-      { label: "Doesn't matter", value: "any" },
+      { label: "One perfect season — in and out", value: "mini" },
+      { label: "A slow-burn world to get lost in", value: "medium" },
+      { label: "A long-running comfort binge", value: "long" },
+      { label: "Doesn't matter if it hooks me", value: "any" },
     ],
+  },
+];
+
+const ANIME_QUESTIONS: QuizQuestion[] = [
+  {
+    id: "anime_genre",
+    question: "What pulls you into an anime?",
+    options: [
+      { label: "Shonen battles & power-ups", value: "anime_action" },
+      { label: "Emotional slice-of-life", value: "anime_sol" },
+      { label: "Dark & psychological thrillers", value: "anime_thriller" },
+      { label: "Romance & coming-of-age", value: "anime_romance" },
+      { label: "Isekai & fantasy worlds", value: "anime_fantasy" },
+      { label: "Mecha & sci-fi", value: "anime_scifi" },
+    ],
+    multi: true,
   },
 ];
 
@@ -87,20 +101,6 @@ const DOCUMENTARY_QUESTIONS: QuizQuestion[] = [
   },
 ];
 
-const SHORT_QUESTIONS: QuizQuestion[] = [
-  {
-    id: "short_vibe",
-    question: "What vibe are you after?",
-    options: [
-      { label: "Experimental & arthouse", value: "arthouse" },
-      { label: "Animated shorts", value: "animated" },
-      { label: "Heartfelt stories", value: "heartfelt" },
-      { label: "Dark & twisted", value: "dark" },
-    ],
-    multi: true,
-  },
-];
-
 export function getQuestionsForTypes(types: string[]): QuizQuestion[] {
   const questions: QuizQuestion[] = [];
   const seen = new Set<string>();
@@ -114,11 +114,11 @@ export function getQuestionsForTypes(types: string[]): QuizQuestion[] {
       case "series":
         typeQuestions = SERIES_QUESTIONS;
         break;
+      case "anime":
+        typeQuestions = ANIME_QUESTIONS;
+        break;
       case "documentaries":
         typeQuestions = DOCUMENTARY_QUESTIONS;
-        break;
-      case "short":
-        typeQuestions = SHORT_QUESTIONS;
         break;
     }
     for (const q of typeQuestions) {
@@ -133,24 +133,30 @@ export function getQuestionsForTypes(types: string[]): QuizQuestion[] {
 }
 
 export const MOOD_TO_GENRES: Record<string, number[]> = {
+  // Movie moods
   thriller: [53, 28, 80],
   comedy: [35],
   drama: [18],
   scifi: [878, 9648],
   horror: [27],
   romance: [10749],
+  // Series moods
   crime: [80, 9648],
   scifi_fantasy: [878, 14],
   reality: [10764],
-  anime: [16],
+  international: [18],
+  // Anime sub-genres (animation genre base)
+  anime_action: [28, 16],
+  anime_sol: [18, 16],
+  anime_thriller: [53, 9648, 16],
+  anime_romance: [10749, 16],
+  anime_fantasy: [14, 16],
+  anime_scifi: [878, 16],
+  // Documentary topics
   true_crime: [80, 99],
   nature: [99],
   history: [36, 99],
   science: [99, 878],
   culture: [10402, 99],
   sports: [99],
-  arthouse: [18],
-  animated: [16],
-  heartfelt: [18, 10749],
-  dark: [53, 27],
 };

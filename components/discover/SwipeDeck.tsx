@@ -16,10 +16,10 @@ export default function SwipeDeck({ cards, onSwipe }: SwipeDeckProps) {
   const visibleCards = cards.slice(0, 3);
 
   return (
-    <div className="relative w-full max-w-sm mx-auto" style={{ height: 520 }}>
+    <div className="relative mx-auto h-[520px] w-[min(88vw,360px)] max-w-sm">
       {visibleCards.map((card, i) => (
         <SwipeCard
-          key={card.id}
+          key={`${card.media_type ?? "movie"}-${card.id}`}
           card={card}
           index={i}
           onSwipe={onSwipe}

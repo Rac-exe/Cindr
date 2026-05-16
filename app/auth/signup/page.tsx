@@ -4,18 +4,41 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 
 export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [dob, setDob] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function getAge(dateString: string): number {
+    const birth = new Date(dateString);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (!dob) {
+      setError("Please enter your date of birth.");
+      return;
+    }
+
+    const age = getAge(dob);
+    if (age < 13) {
+      setError("You must be at least 13 years old to create an account.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -23,13 +46,17 @@ export default function SignupPage() {
         email,
         password,
         options: {
-          data: { display_name: name },
+          data: {
+            display_name: name,
+            date_of_birth: dob,
+            is_adult: age >= 18,
+          },
         },
       });
       if (authError) {
         setError(authError.message);
       } else {
-        router.push("/discover");
+        router.push("/onboarding");
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -38,9 +65,13 @@ export default function SignupPage() {
     }
   }
 
+  const inputClass =
+    "w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border-color)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--color-cindr)] transition-colors";
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10 relative overflow-hidden">
+      <CinematicBackdrop density="balanced" />
+      <div className="w-full max-w-sm relative z-10 rounded-[2rem] border border-white/10 bg-[#111015]/80 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
         <Link href="/" className="block text-center mb-8">
           <span className="text-2xl font-semibold tracking-tight">
             Cin<span className="text-[var(--color-cindr)]">dr</span>
@@ -58,7 +89,7 @@ export default function SignupPage() {
             placeholder="Your name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border-color)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--color-cindr)] transition-colors"
+            className={inputClass}
             required
           />
           <input
@@ -66,16 +97,29 @@ export default function SignupPage() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border-color)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--color-cindr)] transition-colors"
+            className={inputClass}
             required
           />
+          <div>
+            <label className="block text-xs text-[var(--muted)] mb-1.5 ml-1">
+              Date of birth
+            </label>
+            <input
+              type="date"
+              value={dob}
+              onChange={(e) => setDob(e.target.value)}
+              max={new Date().toISOString().split("T")[0]}
+              className={`${inputClass} ${!dob ? "text-[var(--muted)]" : ""}`}
+              required
+            />
+          </div>
           <input
             type="password"
             placeholder="Password (min 6 characters)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             minLength={6}
-            className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border-color)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--color-cindr)] transition-colors"
+            className={inputClass}
             required
           />
 

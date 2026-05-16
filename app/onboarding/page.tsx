@@ -2,12 +2,18 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { LANGUAGES, MAX_LANGUAGES } from "@/lib/constants/languages";
 import { CONTENT_TYPES, getQuestionsForTypes, MOOD_TO_GENRES } from "@/lib/constants/quiz";
 import type { QuizQuestion } from "@/lib/constants/quiz";
 import { savePreferences, markOnboardingComplete } from "@/lib/guest/storage";
+import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 
 type Step = "languages" | "content_type" | "questions";
+
+function OnboardingAtmosphere() {
+  return <CinematicBackdrop density="balanced" />;
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -23,14 +29,12 @@ export default function OnboardingPage() {
     [selectedTypes]
   );
 
-  const totalSteps = 2 + dynamicQuestions.length;
-  const currentStepNum =
+  const mainProgress =
     step === "languages"
-      ? 1
+      ? selectedLangs.length > 0 ? 1 : 0
       : step === "content_type"
-      ? 2
-      : 3 + currentQIndex;
-  const progress = (currentStepNum / totalSteps) * 100;
+      ? selectedTypes.length > 0 ? 2 : 1
+      : 2;
 
   function toggleLang(code: string) {
     setSelectedLangs((prev) => {
@@ -91,6 +95,7 @@ export default function OnboardingPage() {
 
     savePreferences({
       languages: selectedLangs,
+      contentTypes: selectedTypes,
       moods: allMoods,
       genres: Array.from(genreIds),
     });
@@ -106,55 +111,80 @@ export default function OnboardingPage() {
       : (answers[dynamicQuestions[currentQIndex]?.id]?.length ?? 0) > 0;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
-      <div className="w-full max-w-md">
-        {/* Progress bar */}
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
+      <OnboardingAtmosphere />
+
+      <div className="w-full max-w-md relative z-10 rounded-[2rem] border border-white/10 bg-[#111015]/80 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:p-7">
+        {/* Main progress: 0/2, 1/2, 2/2 */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-[var(--muted)]">
-              {currentStepNum} of {totalSteps}
+              {mainProgress} of 2
             </span>
+            {step === "questions" && dynamicQuestions.length > 0 && (
+              <span className="text-xs text-[var(--muted)]">
+                Question {currentQIndex + 1} of {dynamicQuestions.length}
+              </span>
+            )}
           </div>
           <div className="h-1 w-full rounded-full bg-[var(--border-color)] overflow-hidden">
             <div
-              className="h-full rounded-full bg-[var(--color-cindr)] transition-all duration-300"
-              style={{ width: `${progress}%` }}
+              className="h-full rounded-full bg-[var(--color-cindr)] transition-all duration-500"
+              style={{ width: `${(mainProgress / 2) * 100}%` }}
             />
           </div>
+          {step === "questions" && dynamicQuestions.length > 1 && (
+            <div className="flex gap-1.5 mt-2">
+              {dynamicQuestions.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-0.5 flex-1 rounded-full transition-colors duration-300 ${
+                    i <= currentQIndex
+                      ? "bg-[var(--color-cindr)]/60"
+                      : "bg-[var(--border-color)]"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
-        {step === "languages" && (
-          <LanguageStep
-            selected={selectedLangs}
-            onToggle={toggleLang}
-          />
-        )}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step === "questions" ? `q-${currentQIndex}` : step}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            {step === "languages" && (
+              <LanguageStep selected={selectedLangs} onToggle={toggleLang} />
+            )}
 
-        {step === "content_type" && (
-          <ContentTypeStep
-            selected={selectedTypes}
-            onToggle={toggleType}
-          />
-        )}
+            {step === "content_type" && (
+              <ContentTypeStep selected={selectedTypes} onToggle={toggleType} />
+            )}
 
-        {step === "questions" && dynamicQuestions[currentQIndex] && (
-          <QuestionStep
-            question={dynamicQuestions[currentQIndex]}
-            answers={answers[dynamicQuestions[currentQIndex].id] ?? []}
-            onToggle={(val) =>
-              toggleAnswer(
-                dynamicQuestions[currentQIndex].id,
-                val,
-                dynamicQuestions[currentQIndex].multi
-              )
-            }
-          />
-        )}
+            {step === "questions" && dynamicQuestions[currentQIndex] && (
+              <QuestionStep
+                question={dynamicQuestions[currentQIndex]}
+                answers={answers[dynamicQuestions[currentQIndex].id] ?? []}
+                onToggle={(val) =>
+                  toggleAnswer(
+                    dynamicQuestions[currentQIndex].id,
+                    val,
+                    dynamicQuestions[currentQIndex].multi
+                  )
+                }
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
 
         <button
           onClick={handleNext}
           disabled={!canProceed}
-          className="w-full py-3.5 rounded-full bg-[var(--color-cindr)] text-white font-medium transition-all hover:bg-[var(--color-cindr-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full py-3.5 rounded-full bg-[var(--color-cindr)] text-white font-medium transition-all hover:bg-[var(--color-cindr-hover)] disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(216,90,48,0.15)]"
         >
           {step === "questions" && currentQIndex === dynamicQuestions.length - 1
             ? "Start discovering"
@@ -197,10 +227,14 @@ function LanguageStep({
                   : "border-[var(--border-color)] bg-[var(--surface)] hover:border-[var(--muted)]"
               }`}
             >
-              <span className="text-lg">{lang.flag}</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[10px] font-semibold uppercase tracking-wide text-[var(--color-cindr)]">
+                {lang.code}
+              </span>
               <div>
                 <div className="text-sm font-medium">{lang.name}</div>
-                <div className="text-xs text-[var(--muted)]">{lang.nativeName}</div>
+                <div className="text-xs text-[var(--muted)]">
+                  {lang.nativeName}
+                </div>
               </div>
             </button>
           );
@@ -222,9 +256,7 @@ function ContentTypeStep({
       <h1 className="text-2xl font-bold tracking-tight mb-2">
         What are you looking for?
       </h1>
-      <p className="text-sm text-[var(--muted)] mb-6">
-        Pick all that apply.
-      </p>
+      <p className="text-sm text-[var(--muted)] mb-6">Pick all that apply.</p>
       <div className="grid grid-cols-2 gap-2.5">
         {CONTENT_TYPES.map((type) => {
           const isSelected = selected.includes(type.value);
@@ -279,14 +311,26 @@ function QuestionStep({
                   : "border-[var(--border-color)] bg-[var(--surface)] hover:border-[var(--muted)]"
               }`}
             >
-              <span className={`text-sm font-medium ${
-                isSelected ? "text-[var(--foreground)]" : "text-[var(--muted)]"
-              }`}>
+              <span
+                className={`text-sm font-medium ${
+                  isSelected
+                    ? "text-[var(--foreground)]"
+                    : "text-[var(--muted)]"
+                }`}
+              >
                 {opt.label}
               </span>
               {isSelected && (
                 <span className="w-5 h-5 rounded-full bg-[var(--color-cindr)] flex items-center justify-center flex-shrink-0">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  >
                     <path d="M20 6L9 17l-5-5" />
                   </svg>
                 </span>
