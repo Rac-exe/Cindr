@@ -4,29 +4,32 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Movie, Video, WatchProvider } from "@/types/movie";
 import { posterUrl } from "@/types/movie";
+import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 
 interface TrailerDialogProps {
   movieId: number;
+  mediaType?: "movie" | "tv";
   onClose: () => void;
 }
 
-export default function TrailerDialog({ movieId, onClose }: TrailerDialogProps) {
+export default function TrailerDialog({ movieId, mediaType = "movie", onClose }: TrailerDialogProps) {
   const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`/api/tmdb/movie/${movieId}`);
+        const typeParam = mediaType === "tv" ? "?type=tv" : "";
+        const res = await fetch(`/api/tmdb/movie/${movieId}${typeParam}`);
         const data = await res.json();
         setMovie(data);
       } catch (err) {
-        console.error("Failed to fetch movie details:", err);
+        console.error("Failed to fetch details:", err);
       } finally {
         setLoading(false);
       }
     })();
-  }, [movieId]);
+  }, [movieId, mediaType]);
 
   const trailer = movie?.videos?.results?.find(
     (v: Video) =>
@@ -39,11 +42,11 @@ export default function TrailerDialog({ movieId, onClose }: TrailerDialogProps) 
     ) ??
     movie?.videos?.results?.find((v: Video) => v.site === "YouTube");
 
-  // TMDB returns "watch/providers" when using append_to_response
   const wpData = (movie as unknown as Record<string, unknown>)?.["watch/providers"] as Movie["watch_providers"] | undefined;
+  const wpFinal = wpData ?? movie?.watch_providers;
   const providers =
-    wpData?.results?.["IN"] ??
-    wpData?.results?.["US"];
+    wpFinal?.results?.["IN"] ??
+    wpFinal?.results?.["US"];
   const flatrate = providers?.flatrate ?? [];
   const rent = providers?.rent ?? [];
   const buy = providers?.buy ?? [];
@@ -61,12 +64,13 @@ export default function TrailerDialog({ movieId, onClose }: TrailerDialogProps) 
         exit={{ opacity: 0 }}
       >
         <div
-          className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+          className="absolute inset-0 bg-black/82 backdrop-blur-sm"
           onClick={onClose}
         />
+        <CinematicBackdrop density="subtle" />
 
         <motion.div
-          className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-[var(--surface)] border border-[var(--border-color)]"
+          className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-[var(--surface)]/95 border border-white/15 shadow-[0_28px_100px_rgba(0,0,0,0.6)] backdrop-blur-md"
           initial={{ y: "100%" }}
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
@@ -111,6 +115,12 @@ export default function TrailerDialog({ movieId, onClose }: TrailerDialogProps) 
                     </h2>
                     <div className="flex items-center gap-2 mt-1 text-xs text-[var(--muted)]">
                       <span>{movie.release_date?.slice(0, 4)}</span>
+                      {mediaType === "tv" && (
+                        <>
+                          <span className="w-1 h-1 rounded-full bg-[var(--muted)]" />
+                          <span className="text-[var(--color-cindr)]">TV Series</span>
+                        </>
+                      )}
                       {movie.runtime && (
                         <>
                           <span className="w-1 h-1 rounded-full bg-[var(--muted)]" />
@@ -195,7 +205,7 @@ export default function TrailerDialog({ movieId, onClose }: TrailerDialogProps) 
                   </button>
                   <button
                     onClick={() => {
-                      alert("Sign up to save movies to your watchlist!");
+                      alert("Sign up to save to your watchlist!");
                     }}
                     className="px-5 py-3 rounded-xl border border-[var(--border-color)] text-sm font-medium hover:bg-[var(--surface-hover)] transition-colors"
                   >
@@ -206,7 +216,7 @@ export default function TrailerDialog({ movieId, onClose }: TrailerDialogProps) 
             </>
           ) : (
             <div className="py-20 text-center text-sm text-[var(--muted)]">
-              Could not load movie details.
+              Could not load details.
             </div>
           )}
         </motion.div>

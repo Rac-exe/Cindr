@@ -49,3 +49,9 @@ body {
 ::selection {
   background: rgba(216, 90, 48, 0.3);
 }
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

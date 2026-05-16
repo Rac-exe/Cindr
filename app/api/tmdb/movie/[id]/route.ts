@@ -1,23 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMovieDetails } from "@/lib/tmdb/client";
+import { getMovieDetails, getTVDetails } from "@/lib/tmdb/client";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
     const movieId = parseInt(id, 10);
     if (isNaN(movieId)) {
-      return NextResponse.json({ error: "Invalid movie ID" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
     }
 
-    const data = await getMovieDetails(movieId);
+    const mediaType = request.nextUrl.searchParams.get("type") ?? "movie";
+
+    const data =
+      mediaType === "tv"
+        ? await getTVDetails(movieId)
+        : await getMovieDetails(movieId);
+
     return NextResponse.json(data);
   } catch (error) {
-    console.error("TMDB movie detail error:", error);
+    console.error("TMDB detail error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch movie details" },
+      { error: "Failed to fetch details" },
       { status: 500 }
     );
   }

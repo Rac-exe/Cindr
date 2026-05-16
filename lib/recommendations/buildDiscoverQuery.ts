@@ -1,33 +1,39 @@
 import { MOOD_TO_GENRES } from "@/lib/constants/quiz";
 
-interface DiscoverParams {
+export interface DiscoverParams {
   languages: string[];
   moods: string[];
   era: string;
   length: string;
   page?: number;
-  excludeIds?: number[];
+  isAnime?: boolean;
+  includeAdult?: boolean;
 }
 
 export function buildDiscoverQuery(params: DiscoverParams): URLSearchParams {
   const q = new URLSearchParams();
 
   q.set("sort_by", "popularity.desc");
-  q.set("include_adult", "false");
+  q.set("include_adult", params.includeAdult ? "true" : "false");
   q.set("include_video", "false");
   q.set("page", String(params.page ?? 1));
 
-  if (params.languages.length > 0) {
-    q.set("with_original_language", params.languages.join("|"));
-  }
+  if (params.isAnime) {
+    q.set("with_original_language", "ja");
+    q.set("with_genres", "16");
+  } else {
+    if (params.languages.length > 0) {
+      q.set("with_original_language", params.languages.join("|"));
+    }
 
-  const genreIds = new Set<number>();
-  for (const mood of params.moods) {
-    const ids = MOOD_TO_GENRES[mood];
-    if (ids) ids.forEach((id) => genreIds.add(id));
-  }
-  if (genreIds.size > 0) {
-    q.set("with_genres", Array.from(genreIds).join("|"));
+    const genreIds = new Set<number>();
+    for (const mood of params.moods) {
+      const ids = MOOD_TO_GENRES[mood];
+      if (ids) ids.forEach((id) => genreIds.add(id));
+    }
+    if (genreIds.size > 0) {
+      q.set("with_genres", Array.from(genreIds).join("|"));
+    }
   }
 
   const now = new Date();
@@ -58,7 +64,26 @@ export function buildDiscoverQuery(params: DiscoverParams): URLSearchParams {
       break;
   }
 
-  q.set("vote_count.gte", "50");
+  q.set("vote_count.gte", "20");
+
+  return q;
+}
+
+export function buildRelaxedQuery(params: DiscoverParams): URLSearchParams {
+  const q = new URLSearchParams();
+  q.set("sort_by", "popularity.desc");
+  q.set("include_adult", params.includeAdult ? "true" : "false");
+  q.set("include_video", "false");
+  q.set("page", String(params.page ?? 1));
+
+  if (params.isAnime) {
+    q.set("with_original_language", "ja");
+    q.set("with_genres", "16");
+  } else if (params.languages.length > 0) {
+    q.set("with_original_language", params.languages.join("|"));
+  }
+
+  q.set("vote_count.gte", "5");
 
   return q;
 }

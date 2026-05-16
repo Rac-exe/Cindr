@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase/client";
 import AppHeader from "@/components/layout/AppHeader";
 import MobileNav from "@/components/layout/MobileNav";
 import Link from "next/link";
+import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 
 interface SavedMovie {
   id: string;
@@ -44,19 +45,27 @@ export default function WatchlistPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[var(--color-cindr)] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+        <CinematicBackdrop density="subtle" />
+        <div className="w-8 h-8 border-2 border-[var(--color-cindr)] border-t-transparent rounded-full animate-spin relative z-10" />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col relative overflow-hidden">
+        <CinematicBackdrop density="balanced" />
         <AppHeader />
-        <main className="flex-1 flex flex-col items-center justify-center px-6 pt-16">
-          <div className="text-center max-w-xs">
-            <div className="text-4xl mb-4">📌</div>
+        <main className="flex-1 flex flex-col items-center justify-center px-6 pt-16 relative z-10">
+          <div className="text-center max-w-xs rounded-[2rem] border border-white/10 bg-[#111015]/80 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
+            <div className="mb-4 flex justify-center">
+              <svg className="w-14 h-14 text-[var(--color-cindr)] opacity-40" viewBox="0 0 120 120" fill="none">
+                <circle cx="60" cy="60" r="55" stroke="currentColor" strokeWidth="2" />
+                <circle cx="60" cy="60" r="42" stroke="currentColor" strokeWidth="1.5" />
+                <circle cx="60" cy="60" r="10" fill="currentColor" />
+              </svg>
+            </div>
             <h1 className="text-xl font-bold mb-2">Your Watchlist</h1>
             <p className="text-sm text-[var(--muted)] mb-6">
               Sign in to save movies, mark favourites, and track what
@@ -84,12 +93,14 @@ export default function WatchlistPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col relative overflow-hidden">
+      <CinematicBackdrop density="subtle" />
       <AppHeader />
-      <main className="flex-1 pt-20 pb-24 md:pb-8 px-4 max-w-2xl mx-auto w-full">
+      <main className="flex-1 pt-20 pb-24 md:pb-8 px-4 max-w-2xl mx-auto w-full relative z-10">
+        <div className="rounded-[2rem] border border-white/10 bg-[#111015]/82 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
         <h1 className="text-2xl font-bold mb-5">Watchlist</h1>
 
-        <div className="flex gap-1 mb-6 p-1 rounded-xl bg-[var(--surface)] border border-[var(--border-color)]">
+        <div className="flex gap-1 mb-6 p-1 rounded-xl bg-white/[0.04] border border-white/10">
           {(["saved", "favourite", "watched"] as const).map((t) => (
             <button
               key={t}
@@ -106,8 +117,14 @@ export default function WatchlistPage() {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="text-center py-16 text-sm text-[var(--muted)]">
-            No {tab} movies yet. Start swiping to find some!
+          <div className="text-center py-16 px-4 text-sm text-[var(--muted)] rounded-[1.5rem] border border-white/10 bg-black/20">
+            <div className="mx-auto mb-4 h-16 w-16 rounded-full border border-[var(--color-cindr)]/45 flex items-center justify-center text-[var(--color-cindr)]">
+              <svg width="30" height="30" viewBox="0 0 60 60" fill="none" aria-hidden="true">
+                <circle cx="30" cy="30" r="26" stroke="currentColor" strokeWidth="3" />
+                <path d="M24 18l18 12-18 12V18z" fill="currentColor" />
+              </svg>
+            </div>
+            No {tab} movies yet. Swipe right on a trailer to start building this.
           </div>
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
@@ -130,6 +147,7 @@ export default function WatchlistPage() {
             ))}
           </div>
         )}
+        </div>
       </main>
       <MobileNav />
     </div>

@@ -16,6 +16,7 @@ export interface Movie {
   runtime?: number;
   videos?: { results: Video[] };
   watch_providers?: WatchProviderResult;
+  media_type?: "movie" | "tv";
 }
 
 export interface Genre {
@@ -68,6 +69,7 @@ export interface MovieCardData {
   genres: string[];
   language: string;
   runtime?: number;
+  media_type?: "movie" | "tv";
 }
 
 export const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";

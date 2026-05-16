@@ -3,9 +3,10 @@ import { GuestState, UserPreferences } from "@/types/user";
 const STORAGE_KEY = "cindr_guest";
 
 const DEFAULT_STATE: GuestState = {
-  preferences: { languages: [], genres: [], moods: [] },
+  preferences: { languages: [], genres: [], moods: [], contentTypes: [] },
   onboardingComplete: false,
   swipedIds: [],
+  isAdult: false,
 };
 
 function isBrowser(): boolean {
@@ -17,7 +18,12 @@ export function getGuestState(): GuestState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_STATE;
-    return JSON.parse(raw) as GuestState;
+    const parsed = JSON.parse(raw) as Partial<GuestState>;
+    return {
+      ...DEFAULT_STATE,
+      ...parsed,
+      preferences: { ...DEFAULT_STATE.preferences, ...parsed.preferences },
+    };
   } catch {
     return DEFAULT_STATE;
   }
@@ -46,6 +52,10 @@ export function addSwipedId(id: number): void {
   if (!current.swipedIds.includes(id)) {
     saveGuestState({ swipedIds: [...current.swipedIds, id] });
   }
+}
+
+export function clearSwipedIds(): void {
+  saveGuestState({ swipedIds: [] });
 }
 
 export function clearGuestState(): void {
