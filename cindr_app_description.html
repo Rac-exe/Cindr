@@ -1,0 +1,238 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); }
+  .page { padding: 2rem 0; }
+  .hero { text-align: center; padding: 2.5rem 1rem 2rem; border-bottom: 0.5px solid var(--color-border-tertiary); margin-bottom: 2rem; }
+  .logo { font-size: 42px; font-weight: 500; letter-spacing: -2px; color: var(--color-text-primary); }
+  .logo span { color: #D85A30; }
+  .tagline { font-size: 15px; color: var(--color-text-secondary); margin-top: 8px; }
+  .badge { display: inline-block; background: #FAECE7; color: #D85A30; font-size: 11px; padding: 3px 10px; border-radius: 20px; margin-top: 12px; letter-spacing: 0.5px; }
+  .section { margin-bottom: 2rem; }
+  .section-title { font-size: 11px; font-weight: 500; letter-spacing: 1.5px; color: var(--color-text-tertiary); text-transform: uppercase; margin-bottom: 1rem; padding-bottom: 8px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; }
+  .card-icon { font-size: 20px; color: #D85A30; margin-bottom: 10px; }
+  .card-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
+  .card-desc { font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; }
+  .flow { display: flex; flex-direction: column; gap: 0; }
+  .flow-step { display: flex; gap: 16px; align-items: flex-start; padding: 14px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .flow-step:last-child { border-bottom: none; }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; background: #FAECE7; color: #D85A30; font-size: 13px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .step-body { flex: 1; }
+  .step-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 3px; }
+  .step-desc { font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; }
+  .tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--color-text-secondary); }
+  .tag.highlight { background: #FAECE7; border-color: #F0997B; color: #993C1D; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pill-list { display: flex; flex-direction: column; gap: 6px; }
+  .pill { display: flex; align-items: center; gap: 10px; background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 8px 12px; font-size: 13px; color: var(--color-text-primary); }
+  .pill i { color: #D85A30; font-size: 16px; }
+  .priority-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .priority-row:last-child { border-bottom: none; }
+  .priority-num { font-size: 13px; font-weight: 500; color: #D85A30; width: 20px; }
+  .priority-text { font-size: 14px; color: var(--color-text-primary); }
+  .priority-sub { font-size: 12px; color: var(--color-text-secondary); }
+  .stack-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .stack-tag { background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: 6px; padding: 5px 10px; font-size: 12px; color: var(--color-text-secondary); font-family: var(--font-mono); }
+  .divider { border: none; border-top: 0.5px solid var(--color-border-tertiary); margin: 2rem 0; }
+  @media (max-width: 480px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+
+<div class="page">
+  <h2 class="sr-only" style="position:absolute;left:-9999px">Cindr App — Complete Product Description</h2>
+
+  <div class="hero">
+    <div class="logo">Cin<span>dr</span></div>
+    <div class="tagline">Find your perfect match. Movie edition.</div>
+    <div class="badge">PRODUCT BRIEF — v1.0</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">What it is</div>
+    <div class="card" style="border-left: 2px solid #D85A30;">
+      <div class="card-desc" style="font-size: 14px; line-height: 1.8; color: var(--color-text-primary);">
+        Cindr is a swipe-based movie and series discovery web app. Instead of scrolling through endless Netflix grids, users swipe through personalised movie cards one at a time — like Tinder, but for films. Swipe right to watch the trailer, swipe left to skip. No more decision paralysis.
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Core user flow</div>
+    <div class="flow">
+      <div class="flow-step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Land & choose</div>
+          <div class="step-desc">User visits the site. Can start immediately without an account, or sign up to unlock saving features.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Language selection</div>
+          <div class="step-desc">Pick up to 3 preferred languages from a curated list (Hindi, Korean, English, Tamil, Japanese, Spanish, Turkish etc.) shown with flags.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Taste questions</div>
+          <div class="step-desc">A short onboarding quiz infers preferred genres and moods — not overwhelming, just enough to seed the recommendation engine.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Swipe</div>
+          <div class="step-desc">Movie cards appear one by one — poster, title, and a short summary. Swipe right = interested. Swipe left = skip. That's it.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Trailer + save</div>
+          <div class="step-desc">Swipe right triggers a trailer popup (YouTube embed) plus "Where to Watch" info, a Save for Later button, and a Favourite button.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Data source</div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-icon"><i class="ti ti-database" aria-hidden="true"></i></div>
+        <div class="card-title">TMDB API (free)</div>
+        <div class="card-desc">Movie/series data, posters, trailers, cast, ratings, genres, 292 language filters, and a powerful Discover endpoint.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon"><i class="ti ti-device-tv" aria-hidden="true"></i></div>
+        <div class="card-title">Watchmode API</div>
+        <div class="card-desc">"Where to Watch" — which streaming platform has it. Paid at scale but free tier works for MVP.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Genres supported</div>
+    <div class="tag-row">
+      <span class="tag highlight">Action</span>
+      <span class="tag highlight">Thriller</span>
+      <span class="tag highlight">Drama</span>
+      <span class="tag highlight">Comedy</span>
+      <span class="tag highlight">Romance</span>
+      <span class="tag highlight">Horror</span>
+      <span class="tag">Sci-Fi</span>
+      <span class="tag">Mystery</span>
+      <span class="tag">Fantasy</span>
+      <span class="tag">Animation</span>
+      <span class="tag">Documentary</span>
+      <span class="tag">Crime</span>
+      <span class="tag">Adventure</span>
+      <span class="tag">History</span>
+      <span class="tag">War</span>
+      <span class="tag">Family</span>
+      <span class="tag">Music</span>
+      <span class="tag">Western</span>
+      <span class="tag">+ TV genres</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Retention & social features</div>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon"><i class="ti ti-flame" aria-hidden="true"></i></div>
+        <div class="card-title">Streaks</div>
+        <div class="card-desc">Weekly swipe streaks. Not punishing — missing one day doesn't reset everything.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon"><i class="ti ti-award" aria-hidden="true"></i></div>
+        <div class="card-title">Badges</div>
+        <div class="card-desc">Earn badges like "Genre Hopper", "World Cinema", "Night Owl". Fun, shareable, costs nothing to build.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon"><i class="ti ti-users" aria-hidden="true"></i></div>
+        <div class="card-title">Friends</div>
+        <div class="card-desc">Add or invite friends via link. See what they saved. "Compare taste" feature shows overlap.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon"><i class="ti ti-mood-happy" aria-hidden="true"></i></div>
+        <div class="card-title">Reactions</div>
+        <div class="card-desc">After watching: 🔥 Loved / 👍 Good / 😐 Meh / ❌ Not for me. Feeds back into recommendations.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon"><i class="ti ti-bookmark" aria-hidden="true"></i></div>
+        <div class="card-title">Watchlist</div>
+        <div class="card-desc">Saved movies feel like an inbox. Mark as watched to close the loop and re-engage users.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon"><i class="ti ti-bell" aria-hidden="true"></i></div>
+        <div class="card-title">New drops</div>
+        <div class="card-desc">"3 new Korean thrillers added this week" — personalised nudges that feel worth opening.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Build priority order</div>
+    <div class="card" style="padding: 0.5rem 1.25rem;">
+      <div class="priority-row"><span class="priority-num">1</span><div><div class="priority-text">Swipe cards + TMDB data</div><div class="priority-sub">Nothing else works without this</div></div></div>
+      <div class="priority-row"><span class="priority-num">2</span><div><div class="priority-text">Trailer popup + save feature</div><div class="priority-sub">The core satisfaction moment</div></div></div>
+      <div class="priority-row"><span class="priority-num">3</span><div><div class="priority-text">User auth + watchlist</div><div class="priority-sub">Supabase, free tier</div></div></div>
+      <div class="priority-row"><span class="priority-num">4</span><div><div class="priority-text">Invite friends + friend activity</div><div class="priority-sub">Best retention mechanic</div></div></div>
+      <div class="priority-row"><span class="priority-num">5</span><div><div class="priority-text">Badges + streaks</div><div class="priority-sub">Low effort, high perceived value</div></div></div>
+      <div class="priority-row"><span class="priority-num">6</span><div><div class="priority-text">Reactions + new drop notifications</div><div class="priority-sub">Closes the loop, feeds recommendations</div></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Tech stack</div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title" style="margin-bottom: 10px;">Frontend</div>
+        <div class="stack-row">
+          <span class="stack-tag">React</span>
+          <span class="stack-tag">Vercel</span>
+          <span class="stack-tag">CSS/Tailwind</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom: 10px;">Backend & Auth</div>
+        <div class="stack-row">
+          <span class="stack-tag">Supabase</span>
+          <span class="stack-tag">Node/Express</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom: 10px;">APIs</div>
+        <div class="stack-row">
+          <span class="stack-tag">TMDB (free)</span>
+          <span class="stack-tag">Watchmode</span>
+          <span class="stack-tag">YouTube</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom: 10px;">Hosting</div>
+        <div class="stack-row">
+          <span class="stack-tag">Vercel</span>
+          <span class="stack-tag">Supabase free</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Name & identity</div>
+    <div class="card" style="border-left: 2px solid #D85A30;">
+      <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;">
+        <span style="font-size: 22px; font-weight: 500; letter-spacing: -1px; color: var(--color-text-primary);">Cindr</span>
+        <span style="font-size: 13px; color: var(--color-text-secondary);">— chosen for memorability and the Tinder parallel</span>
+      </div>
+      <div class="card-desc" style="font-style: italic; font-size: 14px;">"Find your perfect match. Movie edition."</div>
+    </div>
+  </div>
+
+</div>
