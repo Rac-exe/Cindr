@@ -72,6 +72,25 @@ function FilmReelDecor() {
   );
 }
 
+function PosterSkeleton({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <div className="relative h-[min(74dvh,680px)] w-[min(92vw,440px)] overflow-hidden rounded-[2rem] border border-white/10 bg-[var(--surface)] shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
+        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-transparent" />
+        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <div className="absolute inset-0 rounded-[2rem] ring-1 ring-inset ring-[var(--color-cindr)]/20" />
+        <div className="absolute bottom-6 left-6 right-6 space-y-3">
+          <div className="h-3 w-24 rounded-full bg-white/10" />
+          <div className="h-8 w-3/4 rounded-lg bg-white/10" />
+          <div className="h-3 w-full rounded-full bg-white/10" />
+          <div className="h-3 w-2/3 rounded-full bg-white/10" />
+        </div>
+      </div>
+      <p className="text-sm text-[var(--muted)]">{message}</p>
+    </div>
+  );
+}
+
 export default function DiscoverPage() {
   const [cards, setCards] = useState<MovieCardData[]>([]);
   const [page, setPage] = useState(1);
@@ -220,13 +239,7 @@ export default function DiscoverPage() {
               exit={{ opacity: 0 }}
               className="flex flex-col items-center gap-4"
             >
-              <div className="relative">
-                <div className="w-12 h-12 border-2 border-[var(--color-cindr)] border-t-transparent rounded-full animate-spin" />
-                <div className="absolute inset-0 w-12 h-12 border-2 border-[var(--color-cindr)]/20 rounded-full animate-ping" />
-              </div>
-              <p className="text-sm text-[var(--muted)]">
-                {message}
-              </p>
+              <PosterSkeleton message={message} />
             </motion.div>
           ) : cards.length === 0 ? (
             <motion.div
