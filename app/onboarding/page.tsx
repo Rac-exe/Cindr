@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import { LANGUAGES, MAX_LANGUAGES } from "@/lib/constants/languages";
 import { CONTENT_TYPES, getQuestionsForTypes, MOOD_TO_GENRES } from "@/lib/constants/quiz";
 import type { QuizQuestion } from "@/lib/constants/quiz";
@@ -111,10 +110,10 @@ export default function OnboardingPage() {
       : (answers[dynamicQuestions[currentQIndex]?.id]?.length ?? 0) > 0;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-12 relative overflow-hidden">
       <OnboardingAtmosphere />
 
-      <div className="w-full max-w-md relative z-10 rounded-[2rem] border border-white/10 bg-[#111015]/80 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:p-7">
+      <div className="w-full max-w-md max-h-[92dvh] overflow-y-auto relative z-10 rounded-[2rem] border border-white/10 bg-[#111015]/80 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:p-7">
         {/* Main progress: 0/2, 1/2, 2/2 */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
@@ -149,37 +148,29 @@ export default function OnboardingPage() {
           )}
         </div>
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={step === "questions" ? `q-${currentQIndex}` : step}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.2 }}
-          >
-            {step === "languages" && (
-              <LanguageStep selected={selectedLangs} onToggle={toggleLang} />
-            )}
+        <div className="min-h-[420px]">
+          {step === "languages" && (
+            <LanguageStep selected={selectedLangs} onToggle={toggleLang} />
+          )}
 
-            {step === "content_type" && (
-              <ContentTypeStep selected={selectedTypes} onToggle={toggleType} />
-            )}
+          {step === "content_type" && (
+            <ContentTypeStep selected={selectedTypes} onToggle={toggleType} />
+          )}
 
-            {step === "questions" && dynamicQuestions[currentQIndex] && (
-              <QuestionStep
-                question={dynamicQuestions[currentQIndex]}
-                answers={answers[dynamicQuestions[currentQIndex].id] ?? []}
-                onToggle={(val) =>
-                  toggleAnswer(
-                    dynamicQuestions[currentQIndex].id,
-                    val,
-                    dynamicQuestions[currentQIndex].multi
-                  )
-                }
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
+          {step === "questions" && dynamicQuestions[currentQIndex] && (
+            <QuestionStep
+              question={dynamicQuestions[currentQIndex]}
+              answers={answers[dynamicQuestions[currentQIndex].id] ?? []}
+              onToggle={(val) =>
+                toggleAnswer(
+                  dynamicQuestions[currentQIndex].id,
+                  val,
+                  dynamicQuestions[currentQIndex].multi
+                )
+              }
+            />
+          )}
+        </div>
 
         <button
           onClick={handleNext}
