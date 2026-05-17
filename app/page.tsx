@@ -7,6 +7,7 @@ import { ChatCircleText, SignOut, UserCircle } from "@phosphor-icons/react";
 import { clearGuestState } from "@/lib/guest/storage";
 import { supabase } from "@/lib/supabase/client";
 import { getProfile, submitFeedbackReport } from "@/lib/supabase/core";
+import CindrLogo from "@/components/layout/CindrLogo";
 import type { FeedbackCategory } from "@/types/user";
 
 function FilmReel({ className }: { className?: string }) {
@@ -255,8 +256,8 @@ export default function LandingPage() {
       </div>
 
       <header className="relative z-30 flex items-center justify-between px-6 py-5">
-        <Link href="/" className="text-3xl font-semibold tracking-tight">
-          Cin<span className="text-[var(--color-cindr)]">dr</span>
+        <Link href="/" className="inline-flex items-center" aria-label="Cindr home">
+          <CindrLogo markClassName="h-10 w-10" textClassName="text-3xl" />
         </Link>
         {isSignedIn ? (
           <div ref={profileMenuRef} className="relative">

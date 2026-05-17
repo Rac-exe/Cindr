@@ -10,6 +10,7 @@ import {
   UserCircle,
   type Icon,
 } from "@phosphor-icons/react";
+import CindrLogo from "@/components/layout/CindrLogo";
 
 export default function AppHeader() {
   const pathname = usePathname();
@@ -38,10 +39,8 @@ export default function AppHeader() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-[var(--background)]/80 backdrop-blur-lg border-b border-[var(--border-color)] md:px-5 md:py-4">
-      <Link href="/" className="flex items-center gap-1">
-        <span className="text-xl font-semibold tracking-tight">
-          Cin<span className="text-[var(--color-cindr)]">dr</span>
-        </span>
+      <Link href="/" className="flex items-center" aria-label="Cindr home">
+        <CindrLogo markClassName="h-8 w-8" textClassName="text-xl" />
       </Link>
 
       {!isLanding && (

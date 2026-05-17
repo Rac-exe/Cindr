@@ -16,6 +16,10 @@ export const metadata: Metadata = {
   title: "Cindr — Find your perfect match. Movie edition.",
   description:
     "Swipe through personalised movie recommendations. Swipe right to watch trailers, save favourites, and build your watchlist.",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: "/icon.svg",
+  },
   openGraph: {
     title: "Cindr",
     description: "Find your perfect match. Movie edition.",
