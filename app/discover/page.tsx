@@ -1,8 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getGuestState, addSwipedId, clearSwipedIds } from "@/lib/guest/storage";
+import {
+  getGuestState,
+  addSwipedId,
+  clearSwipedIds,
+  removeSwipedId,
+} from "@/lib/guest/storage";
+import {
+  getEffectivePreferences,
+  likeMovie,
+  patchMovieInteraction,
+} from "@/lib/supabase/core";
 import type { Movie, MovieCardData } from "@/types/movie";
 import { posterUrl } from "@/types/movie";
 import SwipeDeck from "@/components/discover/SwipeDeck";
@@ -39,12 +49,46 @@ const GENRE_MAP: Record<number, string> = {
   10768: "War & Politics",
 };
 
+const MAX_TMDB_DISCOVER_PAGE = 500;
+const SWIPED_RESHUFFLE_THRESHOLD = 200;
+const INITIAL_RANDOM_BATCH_RETRIES = 1;
+const RESHUFFLE_RANDOM_BATCH_RETRIES = 2;
+const DISCOVER_MESSAGES = {
+  finding: "Finding something you'll love...",
+  tryingBatch: "Trying another batch...",
+  refreshingSeen: "Refreshing seen movies...",
+  checkingNext: "Checking the next batch...",
+  specificFilters: "Your filters are very specific.",
+} as const;
+
+type DiscoverBatchResult = {
+  cards: MovieCardData[];
+  lastFetchedPage: number;
+};
+
+function randomDiscoverPage(): number {
+  return Math.floor(Math.random() * MAX_TMDB_DISCOVER_PAGE) + 1;
+}
+
+function normalizeDiscoverPage(page: number): number {
+  return ((page - 1) % MAX_TMDB_DISCOVER_PAGE) + 1;
+}
+
+function randomDiscoverPages(count: number): number[] {
+  return Array.from({ length: count }, randomDiscoverPage);
+}
+
+function shuffleCards<T>(items: T[]): T[] {
+  return [...items].sort(() => Math.random() - 0.5);
+}
+
 function toCardData(movie: Movie): MovieCardData {
   return {
     id: movie.id,
     title: movie.title,
     overview: movie.overview,
     posterUrl: posterUrl(movie.poster_path),
+    posterPath: movie.poster_path,
     year: movie.release_date?.slice(0, 4) ?? "",
     rating: Math.round(movie.vote_average * 10) / 10,
     genres: movie.genre_ids?.map((id) => GENRE_MAP[id] ?? "").filter(Boolean) ?? [],
@@ -54,28 +98,10 @@ function toCardData(movie: Movie): MovieCardData {
   };
 }
 
-function FilmReelDecor() {
-  return (
-    <svg
-      className="w-16 h-16 text-[var(--color-cindr)] opacity-15"
-      viewBox="0 0 120 120"
-      fill="none"
-    >
-      <circle cx="60" cy="60" r="55" stroke="currentColor" strokeWidth="2" />
-      <circle cx="60" cy="60" r="42" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="60" cy="60" r="10" fill="currentColor" />
-      <circle cx="60" cy="18" r="6" fill="currentColor" opacity="0.6" />
-      <circle cx="60" cy="102" r="6" fill="currentColor" opacity="0.6" />
-      <circle cx="18" cy="60" r="6" fill="currentColor" opacity="0.6" />
-      <circle cx="102" cy="60" r="6" fill="currentColor" opacity="0.6" />
-    </svg>
-  );
-}
-
 function PosterSkeleton({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center gap-4">
-      <div className="relative h-[min(74dvh,680px)] w-[min(92vw,440px)] overflow-hidden rounded-[2rem] border border-white/10 bg-[var(--surface)] shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
+      <div className="relative h-[min(62dvh,520px)] w-[min(90vw,390px)] overflow-hidden rounded-[2rem] border border-white/10 bg-[var(--surface)] shadow-[0_28px_90px_rgba(0,0,0,0.55)] sm:h-[min(70dvh,620px)] sm:w-[min(92vw,430px)] md:h-[min(74dvh,680px)] md:w-[min(92vw,440px)]">
         <div className="absolute inset-0 bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-transparent" />
         <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         <div className="absolute inset-0 rounded-[2rem] ring-1 ring-inset ring-[var(--color-cindr)]/20" />
@@ -95,26 +121,59 @@ export default function DiscoverPage() {
   const [cards, setCards] = useState<MovieCardData[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("Finding something you'll love...");
+  const [message, setMessage] = useState<string>(DISCOVER_MESSAGES.finding);
   const [selectedMovie, setSelectedMovie] = useState<{
     id: number;
     mediaType: "movie" | "tv";
+    preview: MovieCardData;
   } | null>(null);
+  const [lastSwipe, setLastSwipe] = useState<{
+    card: MovieCardData;
+    direction: "left" | "right";
+  } | null>(null);
+  const [swipeRequest, setSwipeRequest] = useState<{
+    direction: "left" | "right";
+    nonce: number;
+    cardId: number;
+  } | undefined>();
+  const swipeNonce = useRef(0);
 
   const fetchMovies = useCallback(async (pageNum: number, ignoreSwiped = false) => {
     try {
+      const { preferences, isAdult } = await getEffectivePreferences();
       const guest = getGuestState();
       const params = new URLSearchParams();
-      if (guest.preferences.languages.length > 0) {
-        params.set("languages", guest.preferences.languages.join(","));
+      if (preferences.languages.length > 0) {
+        params.set("languages", preferences.languages.join(","));
       }
-      if (guest.preferences.moods.length > 0) {
-        params.set("moods", guest.preferences.moods.join(","));
+      if (preferences.moods.length > 0) {
+        params.set("moods", preferences.moods.join(","));
       }
-      if (guest.preferences.contentTypes.length > 0) {
-        params.set("contentTypes", guest.preferences.contentTypes.join(","));
+      if (preferences.genres.length > 0) {
+        params.set("genres", preferences.genres.join(","));
       }
-      if (guest.isAdult) {
+      if (preferences.contentTypes.length > 0) {
+        params.set("contentTypes", preferences.contentTypes.join(","));
+      }
+      if (preferences.yearFrom) {
+        params.set("yearFrom", String(preferences.yearFrom));
+      }
+      if (preferences.yearTo) {
+        params.set("yearTo", String(preferences.yearTo));
+      }
+      const actorIds = preferences.people
+        .filter((person) => person.role === "actor")
+        .map((person) => person.id);
+      const directorIds = preferences.people
+        .filter((person) => person.role === "director")
+        .map((person) => person.id);
+      if (actorIds.length > 0) {
+        params.set("actors", actorIds.join("|"));
+      }
+      if (directorIds.length > 0) {
+        params.set("directors", directorIds.join("|"));
+      }
+      if (isAdult) {
         params.set("includeAdult", "true");
       }
       params.set("page", String(pageNum));
@@ -138,71 +197,196 @@ export default function DiscoverPage() {
 
   const fetchBatch = useCallback(
     async (startPage: number, ignoreSwiped = false) => {
-      const pages = [startPage, startPage + 1, startPage + 2];
+      const pages = [startPage, startPage + 1, startPage + 2].map(
+        normalizeDiscoverPage
+      );
       const batches = await Promise.all(
         pages.map((pageNum) => fetchMovies(pageNum, ignoreSwiped))
       );
       const seen = new Set<number>();
-      return batches.flat().filter((card) => {
+      const deduped = batches.flat().filter((card) => {
         if (seen.has(card.id)) return false;
         seen.add(card.id);
         return true;
       });
+      return shuffleCards(deduped);
     },
     [fetchMovies]
+  );
+
+  const fetchFirstAvailableBatch = useCallback(
+    async (
+      startPages: number[],
+      ignoreSwiped = false
+    ): Promise<DiscoverBatchResult> => {
+      let lastFetchedPage = normalizeDiscoverPage((startPages[0] ?? 1) + 2);
+
+      for (const startPage of startPages) {
+        const normalizedStartPage = normalizeDiscoverPage(startPage);
+        const cards = await fetchBatch(normalizedStartPage, ignoreSwiped);
+        lastFetchedPage = normalizeDiscoverPage(normalizedStartPage + 2);
+
+        if (cards.length > 0) {
+          return { cards, lastFetchedPage };
+        }
+      }
+
+      return { cards: [], lastFetchedPage };
+    },
+    [fetchBatch]
   );
 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      setMessage("Finding something you'll love...");
-      const newCards = await fetchBatch(1);
-      setCards(newCards);
-      setPage(3);
+      setMessage(DISCOVER_MESSAGES.finding);
+      const guest = getGuestState();
+      let batch = await fetchFirstAvailableBatch([1]);
+
+      if (batch.cards.length === 0) {
+        setMessage(DISCOVER_MESSAGES.tryingBatch);
+        batch = await fetchFirstAvailableBatch(
+          randomDiscoverPages(INITIAL_RANDOM_BATCH_RETRIES)
+        );
+      }
+
+      if (batch.cards.length === 0 && guest.swipedIds.length > 0) {
+        setMessage(DISCOVER_MESSAGES.refreshingSeen);
+        clearSwipedIds();
+        batch = await fetchFirstAvailableBatch([1], true);
+      }
+
+      if (batch.cards.length === 0) {
+        setMessage(DISCOVER_MESSAGES.specificFilters);
+      }
+
+      setCards(batch.cards);
+      setPage(batch.lastFetchedPage);
       setLoading(false);
     })();
-  }, [fetchBatch]);
+  }, [fetchFirstAvailableBatch]);
 
-  async function loadMore() {
-    const nextPage = page + 1;
+  const reshuffleDeck = useCallback(async () => {
+    setLoading(true);
+    const guest = getGuestState();
+    const shouldClearSwipes =
+      guest.swipedIds.length >= SWIPED_RESHUFFLE_THRESHOLD;
+    const sequentialStartPages = [
+      normalizeDiscoverPage(page + 1),
+      normalizeDiscoverPage(page + 4),
+    ];
+
+    if (shouldClearSwipes) {
+      setMessage(DISCOVER_MESSAGES.checkingNext);
+    } else {
+      setMessage(DISCOVER_MESSAGES.tryingBatch);
+    }
+
+    let batch = await fetchFirstAvailableBatch(sequentialStartPages);
+
+    if (batch.cards.length === 0) {
+      setMessage(DISCOVER_MESSAGES.tryingBatch);
+      batch = await fetchFirstAvailableBatch(
+        randomDiscoverPages(RESHUFFLE_RANDOM_BATCH_RETRIES)
+      );
+    }
+
+    if (batch.cards.length === 0 && guest.swipedIds.length > 0) {
+      setMessage(DISCOVER_MESSAGES.refreshingSeen);
+      clearSwipedIds();
+      batch = await fetchFirstAvailableBatch(sequentialStartPages, true);
+    }
+
+    if (batch.cards.length === 0) {
+      setMessage(DISCOVER_MESSAGES.specificFilters);
+    }
+
+    setCards(batch.cards);
+    setPage(batch.lastFetchedPage);
+    setLoading(false);
+  }, [fetchFirstAvailableBatch, page]);
+
+  async function loadMore(randomize = false) {
+    const nextPage = randomize ? randomDiscoverPage() : page + 1;
     const newCards = await fetchBatch(nextPage);
-    setPage(nextPage + 2);
+    setPage(normalizeDiscoverPage(nextPage + 2));
     setCards((prev) => [...prev, ...newCards]);
   }
 
-  async function showMore() {
-    setLoading(true);
-    setMessage("Opening up the catalog...");
-    clearSwipedIds();
-    const nextStart = page + 1;
-    let newCards = await fetchBatch(nextStart, true);
-    let nextPage = nextStart + 2;
-
-    if (newCards.length === 0) {
-      newCards = await fetchBatch(1, true);
-      nextPage = 3;
-    }
-
-    setCards(newCards);
-    setPage(nextPage);
-    setLoading(false);
-  }
-
   function handleSwipe(id: number, direction: "left" | "right") {
+    setSwipeRequest(undefined);
     addSwipedId(id);
-    if (direction === "right") {
-      const card = cards.find((c) => c.id === id);
+    const card = cards.find((c) => c.id === id);
+    if (card) {
+      setLastSwipe({ card, direction });
+    }
+    if (direction === "right" && card) {
       setSelectedMovie({
         id,
-        mediaType: card?.media_type ?? "movie",
+        mediaType: card.media_type ?? "movie",
+        preview: card,
+      });
+      void likeMovie({
+        tmdb_id: id,
+        media_type: card.media_type ?? "movie",
+        title: card.title,
+        poster_path: card.posterPath ?? null,
       });
     }
     setCards((prev) => prev.filter((c) => c.id !== id));
 
-    if (cards.length <= 3) {
-      loadMore();
+    const remainingCards = cards.length - 1;
+    if (remainingCards <= 0) {
+      void reshuffleDeck();
+    } else if (remainingCards <= 3) {
+      void loadMore();
     }
   }
+
+  const requestKeyboardSwipe = useCallback((direction: "left" | "right") => {
+    const topCard = cards[0];
+    if (!topCard) return;
+    const nonce = swipeNonce.current + 1;
+    swipeNonce.current = nonce;
+    setSwipeRequest({ direction, nonce, cardId: topCard.id });
+  }, [cards]);
+
+  function undoLastSwipe() {
+    if (!lastSwipe) return;
+    removeSwipedId(lastSwipe.card.id);
+    setCards((prev) => {
+      if (prev.some((card) => card.id === lastSwipe.card.id)) return prev;
+      return [lastSwipe.card, ...prev];
+    });
+
+    if (lastSwipe.direction === "right") {
+      void patchMovieInteraction(
+        {
+          tmdb_id: lastSwipe.card.id,
+          media_type: lastSwipe.card.media_type ?? "movie",
+          title: lastSwipe.card.title,
+          poster_path: lastSwipe.card.posterPath ?? null,
+        },
+        { liked: false }
+      );
+    }
+
+    setLastSwipe(null);
+  }
+
+  useEffect(() => {
+    if (
+      loading ||
+      cards.length > 0 ||
+      message === DISCOVER_MESSAGES.specificFilters
+    ) {
+      return;
+    }
+    const retry = window.setTimeout(() => {
+      void reshuffleDeck();
+    }, 900);
+    return () => window.clearTimeout(retry);
+  }, [cards.length, loading, message, reshuffleDeck]);
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -213,23 +397,22 @@ export default function DiscoverPage() {
       if (selectedMovie || cards.length === 0) return;
       if (e.key === "ArrowLeft") {
         e.preventDefault();
-        handleSwipe(cards[0].id, "left");
+        requestKeyboardSwipe("left");
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        handleSwipe(cards[0].id, "right");
+        requestKeyboardSwipe("right");
       }
     }
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cards, selectedMovie]);
+  }, [cards, requestKeyboardSwipe, selectedMovie]);
 
   return (
-    <div className="flex flex-col min-h-screen relative overflow-hidden">
+    <div className="flex flex-col min-h-[100dvh] relative overflow-hidden">
       <CinematicBackdrop density="subtle" />
       <AppHeader />
-      <main className="flex-1 flex flex-col items-center justify-center pt-16 pb-20 md:pb-8 px-4 relative z-10 overflow-hidden">
+      <main className="flex-1 flex flex-col items-center justify-center pt-14 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pt-16 md:pb-8 px-4 relative z-10 overflow-hidden">
         <AnimatePresence mode="wait">
           {loading ? (
             <motion.div
@@ -243,34 +426,13 @@ export default function DiscoverPage() {
             </motion.div>
           ) : cards.length === 0 ? (
             <motion.div
-              key="empty"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
+              key="reshuffling"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-center max-w-xs mx-auto"
+              className="flex flex-col items-center gap-4"
             >
-              <div className="flex justify-center mb-6">
-                <FilmReelDecor />
-              </div>
-              <h2 className="text-lg font-bold mb-2">Let&apos;s widen the search</h2>
-              <p className="text-sm text-[var(--muted)] mb-6 leading-relaxed">
-                This batch ran thin. I can clear the already-swiped list and pull
-                from deeper pages so you get more cards right away.
-              </p>
-              <div className="flex flex-col gap-2.5">
-                <button
-                  onClick={showMore}
-                  className="w-full py-3 rounded-full bg-[var(--color-cindr)] text-white text-sm font-medium hover:bg-[var(--color-cindr-hover)] transition-colors shadow-[0_0_20px_rgba(216,90,48,0.15)]"
-                >
-                  Show me more
-                </button>
-                <button
-                  onClick={() => window.location.href = "/onboarding"}
-                  className="w-full py-3 rounded-full border border-[var(--border-color)] text-sm font-medium text-[var(--muted)] hover:border-[var(--color-cindr)] hover:text-[var(--foreground)] transition-colors"
-                >
-                  Update preferences
-                </button>
-              </div>
+              <PosterSkeleton message={message} />
             </motion.div>
           ) : (
             <motion.div
@@ -279,10 +441,22 @@ export default function DiscoverPage() {
               animate={{ opacity: 1, y: 0 }}
               className="w-full max-w-sm"
             >
-              <SwipeDeck cards={cards} onSwipe={handleSwipe} />
+              <SwipeDeck
+                cards={cards}
+                onSwipe={handleSwipe}
+                swipeRequest={swipeRequest}
+              />
             </motion.div>
           )}
         </AnimatePresence>
+        {lastSwipe && !selectedMovie && (
+          <button
+            onClick={undoLastSwipe}
+            className="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full border border-white/10 bg-[#111015]/90 px-4 py-2 text-xs font-semibold text-white/85 shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:border-[var(--color-cindr)]/45 hover:text-white md:bottom-8 md:right-6"
+          >
+            Undo
+          </button>
+        )}
       </main>
       <MobileNav />
 
@@ -290,6 +464,7 @@ export default function DiscoverPage() {
         <TrailerDialog
           movieId={selectedMovie.id}
           mediaType={selectedMovie.mediaType}
+          preview={selectedMovie.preview}
           onClose={() => setSelectedMovie(null)}
         />
       )}

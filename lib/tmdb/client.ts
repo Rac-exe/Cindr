@@ -142,3 +142,23 @@ export async function getTVDetails(id: number): Promise<Movie> {
 export async function getGenres(): Promise<{ genres: Genre[] }> {
   return tmdbFetch<{ genres: Genre[] }>("/genre/movie/list");
 }
+
+export async function searchPeople(
+  query: string
+): Promise<{
+  results: Array<{
+    id: number;
+    name: string;
+    known_for_department?: string;
+    known_for?: Array<{ title?: string; name?: string }>;
+  }>;
+}> {
+  return tmdbFetch(
+    "/search/person",
+    new URLSearchParams({
+      query,
+      include_adult: "false",
+      page: "1",
+    })
+  );
+}

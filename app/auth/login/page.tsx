@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { syncGuestToAccount, getDbPreferences } from "@/lib/supabase/core";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 
 export default function LoginPage() {
@@ -26,7 +27,11 @@ export default function LoginPage() {
       if (authError) {
         setError(authError.message);
       } else {
-        router.push("/discover");
+        await syncGuestToAccount();
+        const prefs = await getDbPreferences();
+        router.push(
+          prefs?.onboarding_complete ? "/discover" : "/onboarding?mode=quiz"
+        );
       }
     } catch {
       setError("Something went wrong. Please try again.");

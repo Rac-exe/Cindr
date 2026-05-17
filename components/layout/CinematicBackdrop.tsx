@@ -117,22 +117,25 @@ export default function CinematicBackdrop({
   const isSubtle = density === "subtle";
   const neonGlow =
     "drop-shadow-[0_0_4px_rgba(216,90,48,0.8)] drop-shadow-[0_0_12px_rgba(216,90,48,0.45)]";
+  const reelMotionA = "animate-[cindr-reel-drift_48s_linear_infinite] motion-reduce:animate-none";
+  const reelMotionB = "animate-[cindr-reel-drift-reverse_62s_linear_infinite] motion-reduce:animate-none";
+  const stripFloat = "animate-[cindr-film-float_18s_ease-in-out_infinite] motion-reduce:animate-none";
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden text-[#F0642F]" aria-hidden="true">
-      <FilmReel className={`${isSubtle ? "opacity-50" : "opacity-85"} ${neonGlow} absolute -right-8 -top-8 h-44 w-44 sm:h-52 sm:w-52`} />
-      <FilmReel className={`${isSubtle ? "opacity-42" : "opacity-78"} ${neonGlow} absolute -bottom-12 -left-10 h-40 w-40`} />
-      <FilmReel className={`${isSubtle ? "opacity-32" : "opacity-58"} ${neonGlow} absolute right-[8%] top-[58%] hidden h-24 w-24 md:block`} />
-      <FilmReel className={`${isSubtle ? "opacity-30" : "opacity-54"} ${neonGlow} absolute left-[7%] top-[24%] hidden h-20 w-20 md:block`} />
-      <FilmReel className={`${isSubtle ? "opacity-22" : "opacity-42"} ${neonGlow} absolute left-[49%] top-[37%] hidden h-16 w-16 md:block`} />
-      <FilmReel className={`${isSubtle ? "opacity-18" : "opacity-34"} ${neonGlow} absolute bottom-[11%] right-[43%] hidden h-14 w-14 lg:block`} />
+      <FilmReel className={`${isSubtle ? "opacity-50" : "opacity-85"} ${neonGlow} ${reelMotionA} absolute -right-8 -top-8 h-44 w-44 sm:h-52 sm:w-52`} />
+      <FilmReel className={`${isSubtle ? "opacity-42" : "opacity-78"} ${neonGlow} ${reelMotionB} absolute -bottom-12 -left-10 h-40 w-40`} />
+      <FilmReel className={`${isSubtle ? "opacity-32" : "opacity-58"} ${neonGlow} ${reelMotionB} absolute right-[8%] top-[58%] hidden h-24 w-24 md:block`} />
+      <FilmReel className={`${isSubtle ? "opacity-30" : "opacity-54"} ${neonGlow} ${reelMotionA} absolute left-[7%] top-[24%] hidden h-20 w-20 md:block`} />
+      <FilmReel className={`${isSubtle ? "opacity-22" : "opacity-42"} ${neonGlow} ${reelMotionB} absolute left-[49%] top-[37%] hidden h-16 w-16 md:block`} />
+      <FilmReel className={`${isSubtle ? "opacity-18" : "opacity-34"} ${neonGlow} ${reelMotionA} absolute bottom-[11%] right-[43%] hidden h-14 w-14 lg:block`} />
 
-      <FilmStrip className={`${isSubtle ? "opacity-36" : "opacity-70"} ${neonGlow} absolute left-4 top-6 hidden w-7 lg:block`} />
-      <FilmStrip className={`${isSubtle ? "opacity-30" : "opacity-58"} ${neonGlow} absolute right-5 top-20 hidden w-7 lg:block`} />
-      <FilmStrip className={`${isSubtle ? "opacity-24" : "opacity-46"} ${neonGlow} absolute bottom-4 left-[28%] hidden w-6 rotate-[8deg] lg:block`} />
-      <FilmStrip className={`${isSubtle ? "opacity-20" : "opacity-38"} ${neonGlow} absolute right-[36%] top-4 hidden w-5 -rotate-6 lg:block`} />
-      <FilmStrip className={`${isSubtle ? "opacity-18" : "opacity-36"} ${neonGlow} absolute bottom-[18%] right-[18%] hidden w-6 rotate-[11deg] lg:block`} />
-      <FilmStrip className={`${isSubtle ? "opacity-16" : "opacity-32"} ${neonGlow} absolute left-[58%] top-[12%] hidden w-5 rotate-[16deg] xl:block`} />
+      <FilmStrip className={`${isSubtle ? "opacity-36" : "opacity-70"} ${neonGlow} ${stripFloat} absolute left-4 top-6 hidden w-7 [--cinematic-tilt:0deg] lg:block`} />
+      <FilmStrip className={`${isSubtle ? "opacity-30" : "opacity-58"} ${neonGlow} ${stripFloat} absolute right-5 top-20 hidden w-7 [--cinematic-tilt:0deg] [animation-delay:-6s] lg:block`} />
+      <FilmStrip className={`${isSubtle ? "opacity-24" : "opacity-46"} ${neonGlow} ${stripFloat} absolute bottom-4 left-[28%] hidden w-6 [--cinematic-tilt:8deg] [animation-delay:-3s] lg:block`} />
+      <FilmStrip className={`${isSubtle ? "opacity-20" : "opacity-38"} ${neonGlow} ${stripFloat} absolute right-[36%] top-4 hidden w-5 [--cinematic-tilt:-6deg] [animation-delay:-9s] lg:block`} />
+      <FilmStrip className={`${isSubtle ? "opacity-18" : "opacity-36"} ${neonGlow} ${stripFloat} absolute bottom-[18%] right-[18%] hidden w-6 [--cinematic-tilt:11deg] [animation-delay:-12s] lg:block`} />
+      <FilmStrip className={`${isSubtle ? "opacity-16" : "opacity-32"} ${neonGlow} ${stripFloat} absolute left-[58%] top-[12%] hidden w-5 [--cinematic-tilt:16deg] [animation-delay:-15s] xl:block`} />
 
       <Clapperboard className={`${isSubtle ? "opacity-28" : "opacity-54"} ${neonGlow} absolute left-[16%] top-[13%] hidden w-24 -rotate-12 sm:block`} />
       <Clapperboard className={`${isSubtle ? "opacity-24" : "opacity-46"} ${neonGlow} absolute bottom-[18%] right-[11%] hidden w-20 rotate-6 sm:block`} />

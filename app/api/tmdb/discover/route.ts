@@ -9,11 +9,32 @@ export async function GET(request: NextRequest) {
 
     const languages = searchParams.get("languages")?.split(",").filter(Boolean) ?? [];
     const moods = searchParams.get("moods")?.split(",").filter(Boolean) ?? [];
+    const genres = searchParams
+      .get("genres")
+      ?.split(",")
+      .map(Number)
+      .filter((id) => Number.isFinite(id)) ?? [];
+    const actorIds = searchParams
+      .get("actors")
+      ?.split("|")
+      .map(Number)
+      .filter((id) => Number.isFinite(id)) ?? [];
+    const directorIds = searchParams
+      .get("directors")
+      ?.split("|")
+      .map(Number)
+      .filter((id) => Number.isFinite(id)) ?? [];
     const contentTypes = searchParams.get("contentTypes")?.split(",").filter(Boolean) ?? [];
     const era = searchParams.get("era") ?? "any";
     const length = searchParams.get("length") ?? "any";
     const page = parseInt(searchParams.get("page") ?? "1", 10);
     const includeAdult = searchParams.get("includeAdult") === "true";
+    const yearFrom = searchParams.get("yearFrom")
+      ? Number(searchParams.get("yearFrom"))
+      : null;
+    const yearTo = searchParams.get("yearTo")
+      ? Number(searchParams.get("yearTo"))
+      : null;
 
     const wantsMovies = contentTypes.length === 0 || contentTypes.includes("movies");
     const wantsSeries = contentTypes.includes("series");
@@ -21,13 +42,31 @@ export async function GET(request: NextRequest) {
     const wantsDocs = contentTypes.includes("documentaries");
 
     const allResults: Movie[] = [];
-    const baseParams = { languages, moods, era, length, page, includeAdult };
+    const baseParams = {
+      languages,
+      moods,
+      genres,
+      era,
+      length,
+      page,
+      includeAdult,
+      yearFrom: Number.isFinite(yearFrom) ? yearFrom : null,
+      yearTo: Number.isFinite(yearTo) ? yearTo : null,
+      actorIds,
+      directorIds,
+    };
 
     const fetches: Promise<void>[] = [];
 
     if (wantsMovies) {
       fetches.push(
-        discoverMovies(buildDiscoverQuery({ ...baseParams, isAnime: false }))
+        discoverMovies(
+          buildDiscoverQuery({
+            ...baseParams,
+            isAnime: false,
+            mediaType: "movie",
+          })
+        )
           .then((data) => {
             data.results.forEach((m) => {
               m.media_type = "movie";
@@ -39,7 +78,13 @@ export async function GET(request: NextRequest) {
 
     if (wantsSeries) {
       fetches.push(
-        discoverTV(buildDiscoverQuery({ ...baseParams, isAnime: false }))
+        discoverTV(
+          buildDiscoverQuery({
+            ...baseParams,
+            isAnime: false,
+            mediaType: "tv",
+          })
+        )
           .then((data) => {
             allResults.push(...data.results);
           })
@@ -48,13 +93,25 @@ export async function GET(request: NextRequest) {
 
     if (wantsAnime) {
       fetches.push(
-        discoverTV(buildDiscoverQuery({ ...baseParams, isAnime: true }))
+        discoverTV(
+          buildDiscoverQuery({
+            ...baseParams,
+            isAnime: true,
+            mediaType: "tv",
+          })
+        )
           .then((data) => {
             allResults.push(...data.results);
           })
       );
       fetches.push(
-        discoverMovies(buildDiscoverQuery({ ...baseParams, isAnime: true }))
+        discoverMovies(
+          buildDiscoverQuery({
+            ...baseParams,
+            isAnime: true,
+            mediaType: "movie",
+          })
+        )
           .then((data) => {
             data.results.forEach((m) => {
               m.media_type = "movie";
@@ -65,18 +122,40 @@ export async function GET(request: NextRequest) {
     }
 
     if (wantsDocs) {
-      const docParams = new URLSearchParams();
-      docParams.set("sort_by", "popularity.desc");
-      docParams.set("include_adult", includeAdult ? "true" : "false");
-      docParams.set("with_genres", "99");
-      docParams.set("page", String(page));
-      docParams.set("vote_count.gte", "20");
+      const docMovieParams = new URLSearchParams();
+      docMovieParams.set("sort_by", "popularity.desc");
+      docMovieParams.set("include_adult", includeAdult ? "true" : "false");
+      docMovieParams.set("with_genres", "99");
+      docMovieParams.set("page", String(page));
+      docMovieParams.set("vote_count.gte", "20");
+      if (baseParams.yearFrom) {
+        docMovieParams.set("primary_release_date.gte", `${baseParams.yearFrom}-01-01`);
+      }
+      if (baseParams.yearTo) {
+        docMovieParams.set("primary_release_date.lte", `${baseParams.yearTo}-12-31`);
+      }
+      if (actorIds.length > 0) docMovieParams.set("with_cast", actorIds.join("|"));
+      if (directorIds.length > 0) docMovieParams.set("with_crew", directorIds.join("|"));
       if (languages.length > 0) {
-        docParams.set("with_original_language", languages.join("|"));
+        docMovieParams.set("with_original_language", languages.join("|"));
       }
 
+      const docTVParams = new URLSearchParams(docMovieParams);
+      docTVParams.delete("primary_release_date.gte");
+      docTVParams.delete("primary_release_date.lte");
+      docTVParams.delete("with_cast");
+      docTVParams.delete("with_crew");
+      if (baseParams.yearFrom) {
+        docTVParams.set("first_air_date.gte", `${baseParams.yearFrom}-01-01`);
+      }
+      if (baseParams.yearTo) {
+        docTVParams.set("first_air_date.lte", `${baseParams.yearTo}-12-31`);
+      }
+      const peopleIds = [...actorIds, ...directorIds];
+      if (peopleIds.length > 0) docTVParams.set("with_people", peopleIds.join("|"));
+
       fetches.push(
-        discoverMovies(docParams)
+        discoverMovies(docMovieParams)
           .then((data) => {
             data.results.forEach((m) => {
               m.media_type = "movie";
@@ -85,7 +164,7 @@ export async function GET(request: NextRequest) {
           })
       );
       fetches.push(
-        discoverTV(docParams)
+        discoverTV(docTVParams)
           .then((data) => {
             allResults.push(...data.results);
           })
@@ -99,7 +178,14 @@ export async function GET(request: NextRequest) {
 
       if (wantsMovies || contentTypes.length === 0) {
         relaxedFetches.push(
-          discoverMovies(buildRelaxedQuery({ ...baseParams, isAnime: false }))
+          discoverMovies(
+            buildRelaxedQuery({
+              ...baseParams,
+              isAnime: false,
+              mediaType: "movie",
+              includePeople: false,
+            })
+          )
             .then((data) => {
               data.results.forEach((m) => {
                 m.media_type = "movie";
@@ -110,7 +196,14 @@ export async function GET(request: NextRequest) {
       }
       if (wantsSeries) {
         relaxedFetches.push(
-          discoverTV(buildRelaxedQuery({ ...baseParams, isAnime: false }))
+          discoverTV(
+            buildRelaxedQuery({
+              ...baseParams,
+              isAnime: false,
+              mediaType: "tv",
+              includePeople: false,
+            })
+          )
             .then((data) => {
               allResults.push(...data.results);
             })

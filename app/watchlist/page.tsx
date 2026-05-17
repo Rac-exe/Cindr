@@ -2,25 +2,38 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
+import {
+  getSavedMovies,
+} from "@/lib/supabase/core";
+import type { SavedMovie } from "@/types/user";
 import AppHeader from "@/components/layout/AppHeader";
 import MobileNav from "@/components/layout/MobileNav";
 import Link from "next/link";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
+import TrailerDialog from "@/components/discover/TrailerDialog";
+import type { MovieCardData } from "@/types/movie";
+import { posterUrl } from "@/types/movie";
 
-interface SavedMovie {
-  id: string;
-  tmdb_id: number;
-  title: string;
-  poster_path: string;
-  status: "saved" | "favourite" | "watched";
-  created_at: string;
-}
+type WatchlistTab = "liked" | "watchlisted" | "favourite" | "watched";
+
+const TABS: { key: WatchlistTab; label: string }[] = [
+  { key: "liked", label: "Liked" },
+  { key: "watchlisted", label: "Watchlist" },
+  { key: "favourite", label: "Favourite" },
+  { key: "watched", label: "Watched" },
+];
 
 export default function WatchlistPage() {
   const [user, setUser] = useState<unknown>(null);
   const [movies, setMovies] = useState<SavedMovie[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"saved" | "favourite" | "watched">("saved");
+  const [tab, setTab] = useState<WatchlistTab>("liked");
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [selectedMovie, setSelectedMovie] = useState<{
+    id: number;
+    mediaType: "movie" | "tv";
+    preview: MovieCardData;
+  } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -30,18 +43,64 @@ export default function WatchlistPage() {
       setUser(currentUser);
 
       if (currentUser) {
-        const { data } = await supabase
-          .from("saved_movies")
-          .select("*")
-          .eq("user_id", (currentUser as { id: string }).id)
-          .order("created_at", { ascending: false });
-        if (data) setMovies(data as SavedMovie[]);
+        const data = await getSavedMovies();
+        setMovies(data);
       }
       setLoading(false);
     })();
   }, []);
 
-  const filtered = movies.filter((m) => m.status === tab);
+  const filtered = movies.filter((m) => m[tab]);
+
+  async function handleShare(movie: SavedMovie) {
+    const path = `/m/${movie.media_type}/${movie.tmdb_id}`;
+    const url = `${window.location.origin}${path}`;
+    const title = `${movie.title} on Cindr`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title,
+          text: `Check out ${movie.title} on Cindr.`,
+          url,
+        });
+        setShareMessage("Shared");
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareMessage("Link copied");
+      }
+      window.setTimeout(() => setShareMessage(null), 1800);
+    } catch {
+      setShareMessage(null);
+    }
+  }
+
+  function handleInteractionChange(interaction: SavedMovie) {
+    setMovies((prev) => {
+      const exists = prev.some((m) => m.id === interaction.id);
+      if (!exists) return [interaction, ...prev];
+      return prev.map((m) => (m.id === interaction.id ? interaction : m));
+    });
+  }
+
+  function openMovie(movie: SavedMovie) {
+    setSelectedMovie({
+      id: movie.tmdb_id,
+      mediaType: movie.media_type,
+      preview: {
+        id: movie.tmdb_id,
+        title: movie.title,
+        overview: "",
+        posterUrl: posterUrl(movie.poster_path),
+        posterPath: movie.poster_path,
+        year: "",
+        rating: movie.rating ?? 0,
+        genres: [],
+        language: "",
+        media_type: movie.media_type,
+      },
+    });
+  }
 
   if (loading) {
     return (
@@ -100,18 +159,24 @@ export default function WatchlistPage() {
         <div className="rounded-[2rem] border border-white/10 bg-[#111015]/82 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
         <h1 className="text-2xl font-bold mb-5">Watchlist</h1>
 
-        <div className="flex gap-1 mb-6 p-1 rounded-xl bg-white/[0.04] border border-white/10">
-          {(["saved", "favourite", "watched"] as const).map((t) => (
+        {shareMessage && (
+          <div className="mb-3 rounded-full border border-[var(--color-cindr)]/30 bg-[var(--color-cindr)]/10 px-3 py-2 text-center text-xs text-[var(--color-cindr)]">
+            {shareMessage}
+          </div>
+        )}
+
+        <div className="flex gap-1 mb-6 p-1 rounded-xl bg-white/[0.04] border border-white/10 overflow-x-auto">
+          {TABS.map((t) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={t.key}
+              onClick={() => setTab(t.key)}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                tab === t
+                tab === t.key
                   ? "bg-[var(--color-cindr)] text-white"
                   : "text-[var(--muted)] hover:text-[var(--foreground)]"
               }`}
             >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
+              {t.label}
             </button>
           ))}
         </div>
@@ -124,24 +189,80 @@ export default function WatchlistPage() {
                 <path d="M24 18l18 12-18 12V18z" fill="currentColor" />
               </svg>
             </div>
-            No {tab} movies yet. Swipe right on a trailer to start building this.
+            No {tab} titles yet. Swipe right, save, or rate something to start building this.
           </div>
         ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {filtered.map((movie) => (
               <div
                 key={movie.id}
-                className="relative rounded-xl overflow-hidden border border-[var(--border-color)] aspect-[2/3]"
+                role="button"
+                tabIndex={0}
+                onClick={() => openMovie(movie)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openMovie(movie);
+                  }
+                }}
+                className="group relative aspect-[2/3] cursor-pointer overflow-hidden rounded-xl border border-[var(--border-color)] transition-colors hover:border-[var(--color-cindr)]/45"
               >
-                <img
-                  src={`https://image.tmdb.org/t/p/w300${movie.poster_path}`}
-                  alt={movie.title}
-                  className="w-full h-full object-cover"
-                />
+                {movie.poster_path ? (
+                  <img
+                    src={`https://image.tmdb.org/t/p/w300${movie.poster_path}`}
+                    alt={movie.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-[var(--surface)] flex items-center justify-center text-[var(--muted)] text-xs p-2 text-center">
+                    {movie.title}
+                  </div>
+                )}
                 <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
                   <p className="text-[10px] font-medium text-white leading-tight line-clamp-2">
                     {movie.title}
                   </p>
+                  <div className="mt-1 flex items-center gap-1">
+                    {movie.media_type === "tv" && (
+                      <span className="text-[8px] text-[var(--color-cindr)]">TV</span>
+                    )}
+                    {movie.favourite && (
+                      <span className="rounded-full bg-yellow-400/90 px-1.5 py-0.5 text-[8px] font-bold text-black">
+                        Star
+                      </span>
+                    )}
+                    {movie.watched && (
+                      <span className="rounded-full bg-green-400/90 px-1.5 py-0.5 text-[8px] font-bold text-black">
+                        Watched
+                      </span>
+                    )}
+                    {movie.rating && (
+                      <span className="rounded-full bg-[var(--color-cindr)] px-1.5 py-0.5 text-[8px] font-bold text-white">
+                        {movie.rating}/10
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="absolute inset-0 bg-black/55 opacity-0 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2 group-hover:opacity-100 group-focus-within:opacity-100">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openMovie(movie);
+                    }}
+                    className="w-full text-[10px] py-1.5 rounded-lg border border-white/15 bg-white/10 text-white font-medium"
+                  >
+                    Open details
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShare(movie);
+                    }}
+                    className="w-full text-[10px] py-1.5 rounded-lg bg-white/10 text-white font-medium"
+                  >
+                    Share
+                  </button>
                 </div>
               </div>
             ))}
@@ -150,6 +271,16 @@ export default function WatchlistPage() {
         </div>
       </main>
       <MobileNav />
+      {selectedMovie && (
+        <TrailerDialog
+          movieId={selectedMovie.id}
+          mediaType={selectedMovie.mediaType}
+          preview={selectedMovie.preview}
+          sourceList={tab}
+          onInteractionChange={handleInteractionChange}
+          onClose={() => setSelectedMovie(null)}
+        />
+      )}
     </div>
   );
 }

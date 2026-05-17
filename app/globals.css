@@ -50,8 +50,45 @@ body {
   background: rgba(216, 90, 48, 0.3);
 }
 
+.cindr-date-input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+}
+
 @keyframes shimmer {
   100% {
     transform: translateX(100%);
+  }
+}
+
+@keyframes cindr-reel-drift {
+  0% {
+    transform: rotate(0deg) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: rotate(180deg) translate3d(7px, -9px, 0);
+  }
+  100% {
+    transform: rotate(360deg) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes cindr-reel-drift-reverse {
+  0% {
+    transform: rotate(0deg) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: rotate(-180deg) translate3d(-6px, 8px, 0);
+  }
+  100% {
+    transform: rotate(-360deg) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes cindr-film-float {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(var(--cinematic-tilt, 0deg));
+  }
+  50% {
+    transform: translate3d(0, -10px, 0) rotate(var(--cinematic-tilt, 0deg));
   }
 }

@@ -1,32 +1,171 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useMemo, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { LANGUAGES, MAX_LANGUAGES } from "@/lib/constants/languages";
-import { CONTENT_TYPES, getQuestionsForTypes, MOOD_TO_GENRES } from "@/lib/constants/quiz";
+import { CONTENT_TYPES, getQuestionsForTypes } from "@/lib/constants/quiz";
+import { TMDB_GENRES } from "@/lib/constants/tmdbGenres";
 import type { QuizQuestion } from "@/lib/constants/quiz";
 import { savePreferences, markOnboardingComplete } from "@/lib/guest/storage";
+import {
+  upsertPreferences,
+  getCurrentUserId,
+  getEffectivePreferences,
+} from "@/lib/supabase/core";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
+import type { PreferencePerson, PreferencePersonRole } from "@/types/user";
 
 type Step = "languages" | "content_type" | "questions";
+type PreferenceView = "quiz" | "advanced";
+
+type OnboardingHistoryState = {
+  cindrOnboarding: true;
+  step: Step;
+  questionIndex: number;
+};
+
+type PersonSearchResult = {
+  id: number;
+  name: string;
+  knownFor?: string;
+};
+
+function onboardingHash(step: Step, questionIndex: number): string {
+  return step === "questions"
+    ? `#questions-${questionIndex}`
+    : `#${step}`;
+}
 
 function OnboardingAtmosphere() {
   return <CinematicBackdrop density="balanced" />;
 }
 
 export default function OnboardingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[100dvh] flex items-center justify-center relative overflow-hidden">
+          <OnboardingAtmosphere />
+          <div className="w-8 h-8 border-2 border-[var(--color-cindr)] border-t-transparent rounded-full animate-spin relative z-10" />
+        </div>
+      }
+    >
+      <OnboardingContent />
+    </Suspense>
+  );
+}
+
+function OnboardingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const view: PreferenceView =
+    searchParams.get("mode") === "advanced" ? "advanced" : "quiz";
 
   const [step, setStep] = useState<Step>("languages");
   const [selectedLangs, setSelectedLangs] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
+  const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
+  const [yearFrom, setYearFrom] = useState("");
+  const [yearTo, setYearTo] = useState("");
+  const [selectedPeople, setSelectedPeople] = useState<PreferencePerson[]>([]);
+  const [personRole, setPersonRole] = useState<PreferencePersonRole>("actor");
+  const [personQuery, setPersonQuery] = useState("");
+  const [personResults, setPersonResults] = useState<PersonSearchResult[]>([]);
+  const [personSearching, setPersonSearching] = useState(false);
 
   const dynamicQuestions = useMemo(
     () => getQuestionsForTypes(selectedTypes),
     [selectedTypes]
   );
+
+  const setOnboardingLocation = useCallback(
+    (nextStep: Step, nextQuestionIndex = 0, push = true) => {
+      setStep(nextStep);
+      setCurrentQIndex(nextQuestionIndex);
+
+      const state: OnboardingHistoryState = {
+        cindrOnboarding: true,
+        step: nextStep,
+        questionIndex: nextQuestionIndex,
+      };
+      if (typeof window !== "undefined") {
+        const method = push ? "pushState" : "replaceState";
+        window.history[method](state, "", onboardingHash(nextStep, nextQuestionIndex));
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    function handlePopState(event: PopStateEvent) {
+      const state = event.state as Partial<OnboardingHistoryState> | null;
+      if (!state?.cindrOnboarding || !state.step) return;
+      setStep(state.step);
+      setCurrentQIndex(state.questionIndex ?? 0);
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const { preferences } = await getEffectivePreferences();
+      setSelectedLangs(preferences.languages);
+      setSelectedTypes(preferences.contentTypes);
+      setSelectedGenres(preferences.genres);
+      setYearFrom(preferences.yearFrom ? String(preferences.yearFrom) : "");
+      setYearTo(preferences.yearTo ? String(preferences.yearTo) : "");
+      setSelectedPeople(preferences.people ?? []);
+      setAnswers((prev) => {
+        const next = { ...prev };
+        for (const question of getQuestionsForTypes(preferences.contentTypes)) {
+          const selectedValues = question.options
+            .map((option) => option.value)
+            .filter((value) => preferences.moods.includes(value));
+          if (selectedValues.length > 0) {
+            next[question.id] = selectedValues;
+          }
+        }
+        return next;
+      });
+    })();
+  }, []);
+
+  useEffect(() => {
+    const query = personQuery.trim();
+    if (query.length < 2) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setPersonSearching(true);
+      try {
+        const params = new URLSearchParams({ query });
+        const res = await fetch(`/api/tmdb/search-person?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        const data = (await res.json()) as { results?: PersonSearchResult[] };
+        setPersonResults(data.results ?? []);
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
+          setPersonResults([]);
+        }
+      } finally {
+        setPersonSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [personQuery]);
 
   const mainProgress =
     step === "languages"
@@ -64,41 +203,122 @@ export default function OnboardingPage() {
     });
   }
 
+  function toggleGenre(id: number) {
+    setSelectedGenres((prev) =>
+      prev.includes(id)
+        ? prev.filter((genreId) => genreId !== id)
+        : [...prev, id]
+    );
+  }
+
+  function normalizeYear(value: string): number | null {
+    if (!value) return null;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return null;
+    return Math.max(1870, Math.min(2100, Math.round(parsed)));
+  }
+
+  function addPerson(person: PersonSearchResult) {
+    setSelectedPeople((prev) => {
+      if (prev.some((item) => item.id === person.id && item.role === personRole)) {
+        return prev;
+      }
+      if (prev.length >= 5) return prev;
+      return [...prev, { id: person.id, name: person.name, role: personRole }];
+    });
+    setPersonQuery("");
+    setPersonResults([]);
+  }
+
+  function handlePersonQueryChange(value: string) {
+    setPersonQuery(value);
+    if (value.trim().length < 2) {
+      setPersonResults([]);
+      setPersonSearching(false);
+    }
+  }
+
+  function removePerson(person: PreferencePerson) {
+    setSelectedPeople((prev) =>
+      prev.filter(
+        (item) => !(item.id === person.id && item.role === person.role)
+      )
+    );
+  }
+
+  function buildPrefs(moods: string[]) {
+    const fromYear = normalizeYear(yearFrom);
+    const toYear = normalizeYear(yearTo);
+
+    return {
+      languages: selectedLangs,
+      contentTypes: selectedTypes,
+      moods,
+      genres: selectedGenres,
+      yearFrom: fromYear && toYear && fromYear > toYear ? toYear : fromYear,
+      yearTo: fromYear && toYear && fromYear > toYear ? fromYear : toYear,
+      people: selectedPeople,
+    };
+  }
+
+  async function saveAdvancedFilters() {
+    const allMoods: string[] = [];
+    Object.values(answers).forEach((vals) => allMoods.push(...vals));
+    const prefs = buildPrefs(allMoods);
+
+    savePreferences(prefs);
+
+    const userId = await getCurrentUserId();
+    if (userId) {
+      await upsertPreferences(prefs);
+    }
+
+    router.push("/discover");
+  }
+
   function handleNext() {
     if (step === "languages") {
-      setStep("content_type");
+      setOnboardingLocation("content_type");
     } else if (step === "content_type") {
       if (dynamicQuestions.length > 0) {
-        setCurrentQIndex(0);
-        setStep("questions");
+        setOnboardingLocation("questions", 0);
       } else {
         finish();
       }
     } else if (step === "questions") {
       if (currentQIndex < dynamicQuestions.length - 1) {
-        setCurrentQIndex((i) => i + 1);
+        setOnboardingLocation("questions", currentQIndex + 1);
       } else {
         finish();
       }
     }
   }
 
-  function finish() {
+  function handleBack() {
+    if (view === "advanced") {
+      router.push("/discover");
+      return;
+    }
+    if (step === "languages") {
+      router.push("/discover");
+      return;
+    }
+    window.history.back();
+  }
+
+  async function finish() {
     const allMoods: string[] = [];
     Object.values(answers).forEach((vals) => allMoods.push(...vals));
-    const genreIds = new Set<number>();
-    allMoods.forEach((m) => {
-      const ids = MOOD_TO_GENRES[m];
-      if (ids) ids.forEach((id) => genreIds.add(id));
-    });
+    const prefs = buildPrefs(allMoods);
 
-    savePreferences({
-      languages: selectedLangs,
-      contentTypes: selectedTypes,
-      moods: allMoods,
-      genres: Array.from(genreIds),
-    });
+    savePreferences(prefs);
     markOnboardingComplete();
+
+    const userId = await getCurrentUserId();
+    if (userId) {
+      await upsertPreferences({ ...prefs, onboardingComplete: true });
+    }
+
     router.push("/discover");
   }
 
@@ -109,14 +329,188 @@ export default function OnboardingPage() {
       ? selectedTypes.length > 0
       : (answers[dynamicQuestions[currentQIndex]?.id]?.length ?? 0) > 0;
 
+  if (view === "advanced") {
+    return (
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center px-3 py-3 sm:px-6 sm:py-12 relative overflow-hidden">
+        <OnboardingAtmosphere />
+
+        <div className="w-full max-w-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto relative z-10 rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:max-h-[92dvh] sm:rounded-[2rem] sm:p-7">
+          <button
+            type="button"
+            onClick={() => router.push("/discover")}
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white"
+          >
+            <span>&larr;</span>
+            Back to Discover
+          </button>
+
+          <h1 className="text-2xl font-bold tracking-tight mb-2">
+            Advanced filters
+          </h1>
+          <p className="text-sm leading-relaxed text-[var(--muted)] mb-6">
+            Optional controls for narrowing discovery. Leave anything empty and
+            Cindr will keep that part flexible.
+          </p>
+
+          <div className="space-y-5">
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <label className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                  Release years
+                </label>
+                <span className="text-[10px] text-[var(--muted)]">Optional</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <input
+                  type="number"
+                  min={1870}
+                  max={2100}
+                  placeholder="From"
+                  value={yearFrom}
+                  onChange={(event) => setYearFrom(event.target.value)}
+                  className="min-w-0 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-[var(--muted)] focus:border-[var(--color-cindr)]"
+                />
+                <input
+                  type="number"
+                  min={1870}
+                  max={2100}
+                  placeholder="To"
+                  value={yearTo}
+                  onChange={(event) => setYearTo(event.target.value)}
+                  className="min-w-0 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-[var(--muted)] focus:border-[var(--color-cindr)]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Genres
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {TMDB_GENRES.map((genre) => {
+                  const selected = selectedGenres.includes(genre.id);
+                  return (
+                    <button
+                      type="button"
+                      key={genre.id}
+                      onClick={() => toggleGenre(genre.id)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        selected
+                          ? "border-[var(--color-cindr)] bg-[var(--color-cindr)]/15 text-white"
+                          : "border-[var(--border-color)] text-[var(--muted)] hover:border-white/20 hover:text-white"
+                      }`}
+                    >
+                      {genre.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                  People
+                </label>
+                <div className="grid grid-cols-2 rounded-full border border-white/10 bg-black/20 p-0.5">
+                  {(["actor", "director"] as PreferencePersonRole[]).map((role) => (
+                    <button
+                      type="button"
+                      key={role}
+                      onClick={() => setPersonRole(role)}
+                      className={`rounded-full px-2.5 py-1 text-[10px] font-semibold capitalize transition-colors ${
+                        personRole === role
+                          ? "bg-[var(--color-cindr)] text-white"
+                          : "text-[var(--muted)] hover:text-white"
+                      }`}
+                    >
+                      {role}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <input
+                type="search"
+                value={personQuery}
+                onChange={(event) => handlePersonQueryChange(event.target.value)}
+                placeholder={`Search ${personRole}s`}
+                className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-[var(--muted)] focus:border-[var(--color-cindr)]"
+              />
+              {(personSearching || personResults.length > 0) && (
+                <div className="mt-2 max-h-44 overflow-y-auto rounded-xl border border-white/10 bg-black/25 p-1.5">
+                  {personSearching ? (
+                    <p className="px-2 py-2 text-xs text-[var(--muted)]">Searching...</p>
+                  ) : (
+                    personResults.slice(0, 6).map((person) => (
+                      <button
+                        type="button"
+                        key={person.id}
+                        onClick={() => addPerson(person)}
+                        className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left transition-colors hover:bg-white/10"
+                      >
+                        <span>
+                          <span className="block text-sm font-medium">{person.name}</span>
+                          {person.knownFor && (
+                            <span className="line-clamp-1 text-xs text-[var(--muted)]">
+                              {person.knownFor}
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-xs capitalize text-[var(--color-cindr)]">
+                          {personRole}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+              {selectedPeople.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {selectedPeople.map((person) => (
+                    <button
+                      type="button"
+                      key={`${person.role}-${person.id}`}
+                      onClick={() => removePerson(person)}
+                      className="rounded-full border border-[var(--color-cindr)]/35 bg-[var(--color-cindr)]/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-500/15"
+                      title="Remove"
+                    >
+                      {person.name} · {person.role} ×
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-[0.45fr_1fr] gap-2.5">
+            <button
+              type="button"
+              onClick={() => router.push("/discover")}
+              className="py-3.5 rounded-full border border-white/10 bg-white/[0.04] text-white/80 font-medium transition-all hover:border-white/20 hover:bg-white/[0.08]"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={saveAdvancedFilters}
+              className="py-3.5 rounded-full bg-[var(--color-cindr)] text-white font-medium transition-all hover:bg-[var(--color-cindr-hover)] shadow-[0_0_20px_rgba(216,90,48,0.15)]"
+            >
+              Save filters
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-[100dvh] flex flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-12 relative overflow-hidden">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center px-3 py-3 sm:px-6 sm:py-12 relative overflow-hidden">
       <OnboardingAtmosphere />
 
-      <div className="w-full max-w-md max-h-[92dvh] overflow-y-auto relative z-10 rounded-[2rem] border border-white/10 bg-[#111015]/80 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:p-7">
+      <div className="w-full max-w-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto relative z-10 rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:max-h-[92dvh] sm:rounded-[2rem] sm:p-7">
         {/* Main progress: 0/2, 1/2, 2/2 */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
+        <div className="mb-5 sm:mb-8">
+          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
             <span className="text-xs text-[var(--muted)]">
               {mainProgress} of 2
             </span>
@@ -148,7 +542,7 @@ export default function OnboardingPage() {
           )}
         </div>
 
-        <div className="min-h-[420px]">
+        <div className="min-h-0 sm:min-h-[420px]">
           {step === "languages" && (
             <LanguageStep selected={selectedLangs} onToggle={toggleLang} />
           )}
@@ -172,15 +566,23 @@ export default function OnboardingPage() {
           )}
         </div>
 
-        <button
-          onClick={handleNext}
-          disabled={!canProceed}
-          className="w-full py-3.5 rounded-full bg-[var(--color-cindr)] text-white font-medium transition-all hover:bg-[var(--color-cindr-hover)] disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(216,90,48,0.15)]"
-        >
-          {step === "questions" && currentQIndex === dynamicQuestions.length - 1
-            ? "Start discovering"
-            : "Continue"}
-        </button>
+        <div className="grid grid-cols-[0.45fr_1fr] gap-2 sm:gap-2.5">
+          <button
+            onClick={handleBack}
+            className="py-2.5 text-sm rounded-full border border-white/10 bg-white/[0.04] text-white/80 font-medium transition-all hover:border-white/20 hover:bg-white/[0.08] sm:py-3.5 sm:text-base"
+          >
+            Back
+          </button>
+          <button
+            onClick={handleNext}
+            disabled={!canProceed}
+            className="py-2.5 text-sm rounded-full bg-[var(--color-cindr)] text-white font-medium transition-all hover:bg-[var(--color-cindr-hover)] disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(216,90,48,0.15)] sm:py-3.5 sm:text-base"
+          >
+            {step === "questions" && currentQIndex === dynamicQuestions.length - 1
+              ? "Start discovering"
+              : "Continue"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -194,14 +596,14 @@ function LanguageStep({
   onToggle: (code: string) => void;
 }) {
   return (
-    <div className="mb-8">
-      <h1 className="text-2xl font-bold tracking-tight mb-2">
+    <div className="mb-4 sm:mb-8">
+      <h1 className="text-xl font-bold tracking-tight mb-1 sm:text-2xl sm:mb-2">
         What languages do you watch in?
       </h1>
-      <p className="text-sm text-[var(--muted)] mb-6">
+      <p className="text-xs text-[var(--muted)] mb-3 sm:text-sm sm:mb-6">
         Pick up to {MAX_LANGUAGES}.
       </p>
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-2 gap-1.5 sm:gap-2.5">
         {LANGUAGES.map((lang) => {
           const isSelected = selected.includes(lang.code);
           const isDisabled = !isSelected && selected.length >= MAX_LANGUAGES;
@@ -210,7 +612,7 @@ function LanguageStep({
               key={lang.code}
               onClick={() => onToggle(lang.code)}
               disabled={isDisabled}
-              className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all text-left ${
+              className={`flex items-center gap-2 p-2 rounded-xl border transition-all text-left sm:gap-3 sm:p-3.5 ${
                 isSelected
                   ? "border-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
                   : isDisabled
@@ -218,12 +620,12 @@ function LanguageStep({
                   : "border-[var(--border-color)] bg-[var(--surface)] hover:border-[var(--muted)]"
               }`}
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[10px] font-semibold uppercase tracking-wide text-[var(--color-cindr)]">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[9px] font-semibold uppercase tracking-wide text-[var(--color-cindr)] sm:h-8 sm:w-8 sm:text-[10px]">
                 {lang.code}
               </span>
-              <div>
-                <div className="text-sm font-medium">{lang.name}</div>
-                <div className="text-xs text-[var(--muted)]">
+              <div className="min-w-0">
+                <div className="truncate text-xs font-medium sm:text-sm">{lang.name}</div>
+                <div className="truncate text-[10px] text-[var(--muted)] sm:text-xs">
                   {lang.nativeName}
                 </div>
               </div>
@@ -243,19 +645,19 @@ function ContentTypeStep({
   onToggle: (value: string) => void;
 }) {
   return (
-    <div className="mb-8">
-      <h1 className="text-2xl font-bold tracking-tight mb-2">
+    <div className="mb-4 sm:mb-8">
+      <h1 className="text-xl font-bold tracking-tight mb-1 sm:text-2xl sm:mb-2">
         What are you looking for?
       </h1>
-      <p className="text-sm text-[var(--muted)] mb-6">Pick all that apply.</p>
-      <div className="grid grid-cols-2 gap-2.5">
+      <p className="text-xs text-[var(--muted)] mb-3 sm:text-sm sm:mb-6">Pick all that apply.</p>
+      <div className="grid grid-cols-2 gap-1.5 sm:gap-2.5">
         {CONTENT_TYPES.map((type) => {
           const isSelected = selected.includes(type.value);
           return (
             <button
               key={type.value}
               onClick={() => onToggle(type.value)}
-              className={`p-4 rounded-xl border transition-all text-left ${
+              className={`p-3 rounded-xl border transition-all text-left sm:p-4 ${
                 isSelected
                   ? "border-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
                   : "border-[var(--border-color)] bg-[var(--surface)] hover:border-[var(--muted)]"
@@ -280,23 +682,23 @@ function QuestionStep({
   onToggle: (value: string) => void;
 }) {
   return (
-    <div className="mb-8">
-      <h1 className="text-2xl font-bold tracking-tight mb-2">
+    <div className="mb-4 sm:mb-8">
+      <h1 className="text-xl font-bold tracking-tight mb-1 sm:text-2xl sm:mb-2">
         {question.question}
       </h1>
       {question.multi && (
-        <p className="text-sm text-[var(--muted)] mb-6">
+        <p className="text-xs text-[var(--muted)] mb-3 sm:text-sm sm:mb-6">
           Pick as many as you like.
         </p>
       )}
-      <div className="flex flex-col gap-2.5 mt-4">
+      <div className="flex flex-col gap-1.5 mt-3 sm:gap-2.5 sm:mt-4">
         {question.options.map((opt) => {
           const isSelected = answers.includes(opt.value);
           return (
             <button
               key={opt.value}
               onClick={() => onToggle(opt.value)}
-              className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
+              className={`flex items-center justify-between p-3 rounded-xl border transition-all text-left sm:p-4 ${
                 isSelected
                   ? "border-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
                   : "border-[var(--border-color)] bg-[var(--surface)] hover:border-[var(--muted)]"

@@ -31,6 +31,7 @@ export interface Video {
   site: string;
   type: string;
   official: boolean;
+  iso_639_1?: string;
 }
 
 export interface WatchProvider {
@@ -64,6 +65,7 @@ export interface MovieCardData {
   title: string;
   overview: string;
   posterUrl: string | null;
+  posterPath?: string | null;
   year: string;
   rating: number;
   genres: string[];

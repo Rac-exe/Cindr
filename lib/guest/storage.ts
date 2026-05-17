@@ -3,7 +3,15 @@ import { GuestState, UserPreferences } from "@/types/user";
 const STORAGE_KEY = "cindr_guest";
 
 const DEFAULT_STATE: GuestState = {
-  preferences: { languages: [], genres: [], moods: [], contentTypes: [] },
+  preferences: {
+    languages: [],
+    genres: [],
+    moods: [],
+    contentTypes: [],
+    yearFrom: null,
+    yearTo: null,
+    people: [],
+  },
   onboardingComplete: false,
   swipedIds: [],
   isAdult: false,
@@ -52,6 +60,11 @@ export function addSwipedId(id: number): void {
   if (!current.swipedIds.includes(id)) {
     saveGuestState({ swipedIds: [...current.swipedIds, id] });
   }
+}
+
+export function removeSwipedId(id: number): void {
+  const current = getGuestState();
+  saveGuestState({ swipedIds: current.swipedIds.filter((swipedId) => swipedId !== id) });
 }
 
 export function clearSwipedIds(): void {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import type { MovieCardData } from "@/types/movie";
 import SwipeActions from "./SwipeActions";
@@ -10,13 +10,29 @@ const SWIPE_THRESHOLD = 120;
 interface SwipeDeckProps {
   cards: MovieCardData[];
   onSwipe: (id: number, direction: "left" | "right") => void;
+  swipeRequest?: { direction: "left" | "right"; nonce: number; cardId: number };
 }
 
-export default function SwipeDeck({ cards, onSwipe }: SwipeDeckProps) {
+export default function SwipeDeck({ cards, onSwipe, swipeRequest }: SwipeDeckProps) {
   const visibleCards = cards.slice(0, 3);
+  const [actionRequest, setActionRequest] = useState<{
+    direction: "left" | "right";
+    nonce: number;
+    cardId: number;
+  } | null>(null);
+  const actionNonce = useRef(0);
+  const activeRequest = swipeRequest ?? actionRequest ?? undefined;
+
+  function requestSwipe(direction: "left" | "right") {
+    const topCard = visibleCards[0];
+    if (!topCard) return;
+    const nonce = actionNonce.current + 1;
+    actionNonce.current = nonce;
+    setActionRequest({ direction, nonce, cardId: topCard.id });
+  }
 
   return (
-    <div className="relative mx-auto h-[min(74dvh,680px)] w-[min(92vw,440px)]">
+    <div className="relative mx-auto h-[min(62dvh,520px)] w-[min(90vw,390px)] sm:h-[min(70dvh,620px)] sm:w-[min(92vw,430px)] md:h-[min(74dvh,680px)] md:w-[min(92vw,440px)]">
       {visibleCards.map((card, i) => (
         <SwipeCard
           key={`${card.media_type ?? "movie"}-${card.id}`}
@@ -24,12 +40,13 @@ export default function SwipeDeck({ cards, onSwipe }: SwipeDeckProps) {
           index={i}
           onSwipe={onSwipe}
           isTop={i === 0}
+          swipeRequest={i === 0 ? activeRequest : undefined}
         />
       ))}
       {visibleCards.length > 0 && (
         <SwipeActions
-          onSkip={() => onSwipe(visibleCards[0].id, "left")}
-          onLike={() => onSwipe(visibleCards[0].id, "right")}
+          onSkip={() => requestSwipe("left")}
+          onLike={() => requestSwipe("right")}
         />
       )}
     </div>
@@ -41,13 +58,16 @@ function SwipeCard({
   index,
   onSwipe,
   isTop,
+  swipeRequest,
 }: {
   card: MovieCardData;
   index: number;
   onSwipe: (id: number, direction: "left" | "right") => void;
   isTop: boolean;
+  swipeRequest?: { direction: "left" | "right"; nonce: number; cardId: number };
 }) {
-  const [exiting, setExiting] = useState(false);
+  const [exitingDirection, setExitingDirection] = useState<"left" | "right" | null>(null);
+  const handledNonce = useRef<number | null>(null);
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-220, 220], [-14, 14]);
   const leftOpacity = useTransform(x, [-100, -20], [1, 0]);
@@ -55,14 +75,29 @@ function SwipeCard({
   const borderOpacity = useTransform(x, [-180, 0, 180], [0.9, 0.45, 0.9]);
   const accentX = useTransform(x, [-180, 180], ["-22%", "22%"]);
 
+  function exitCard(direction: "left" | "right") {
+    if (exitingDirection) return;
+    setExitingDirection(direction);
+    setTimeout(() => onSwipe(card.id, direction), 200);
+  }
+
   function handleDragEnd(_: unknown, info: PanInfo) {
     const offset = info.offset.x;
     if (Math.abs(offset) > SWIPE_THRESHOLD) {
-      setExiting(true);
       const direction = offset > 0 ? "right" : "left";
-      setTimeout(() => onSwipe(card.id, direction), 200);
+      exitCard(direction);
     }
   }
+
+  useEffect(() => {
+    if (!isTop || !swipeRequest) return;
+    if (swipeRequest.cardId !== card.id) return;
+    if (handledNonce.current === swipeRequest.nonce) return;
+    handledNonce.current = swipeRequest.nonce;
+    exitCard(swipeRequest.direction);
+    // exitCard intentionally reads the current card instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTop, swipeRequest]);
 
   const scale = 1 - index * 0.04;
   const yOffset = index * 10;
@@ -85,10 +120,10 @@ function SwipeCard({
           : { opacity: 0, scale: 0.9, y: 18 }
       }
       animate={
-        exiting
+        exitingDirection
           ? {
-              x: x.get() > 0 ? 520 : -520,
-              rotate: x.get() > 0 ? 18 : -18,
+              x: exitingDirection === "right" ? 520 : -520,
+              rotate: exitingDirection === "right" ? 18 : -18,
               opacity: 0,
               scale: 0.96,
               transition: { duration: 0.28, ease: [0.23, 1, 0.32, 1] },

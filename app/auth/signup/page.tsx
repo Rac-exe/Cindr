@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { syncGuestToAccount } from "@/lib/supabase/core";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 
 export default function SignupPage() {
   const router = useRouter();
+  const dobInputRef = useRef<HTMLInputElement>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -22,6 +24,18 @@ export default function SignupPage() {
     const m = today.getMonth() - birth.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
     return age;
+  }
+
+  function openDatePicker() {
+    const input = dobInputRef.current;
+    if (!input) return;
+
+    input.focus();
+    if (typeof input.showPicker === "function") {
+      input.showPicker();
+      return;
+    }
+    input.click();
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -56,7 +70,8 @@ export default function SignupPage() {
       if (authError) {
         setError(authError.message);
       } else {
-        router.push("/onboarding");
+        await syncGuestToAccount();
+        router.push("/onboarding?mode=quiz");
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -104,14 +119,38 @@ export default function SignupPage() {
             <label className="block text-xs text-[var(--muted)] mb-1.5 ml-1">
               Date of birth
             </label>
-            <input
-              type="date"
-              value={dob}
-              onChange={(e) => setDob(e.target.value)}
-              max={new Date().toISOString().split("T")[0]}
-              className={`${inputClass} ${!dob ? "text-[var(--muted)]" : ""}`}
-              required
-            />
+            <div className="relative">
+              <input
+                ref={dobInputRef}
+                type="date"
+                value={dob}
+                onChange={(e) => setDob(e.target.value)}
+                max={new Date().toISOString().split("T")[0]}
+                className={`${inputClass} cindr-date-input pr-11 ${!dob ? "text-[var(--muted)]" : ""}`}
+                required
+              />
+              <button
+                type="button"
+                onClick={openDatePicker}
+                className="absolute right-3 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-white/90 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label="Open date picker"
+              >
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M7 3v3M17 3v3M4 9h16M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
           <input
             type="password"
