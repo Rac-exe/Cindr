@@ -267,3 +267,4 @@ Near-term opportunities:
 - Do not expose TMDB credentials or Cloudinary API secrets to the browser.
 - Prefer server-side TMDB access through `lib/tmdb/client.ts` and the existing API routes.
 - Run `npm run lint` before opening a PR or shipping a handoff.
+
