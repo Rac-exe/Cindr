@@ -4,12 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookmarkSimple, Eye, Heart, Star } from "@phosphor-icons/react";
-import type { Movie, MovieCardData, Video, WatchProvider } from "@/types/movie";
+import type { Movie, MovieCardData, WatchProvider } from "@/types/movie";
 import { posterUrl } from "@/types/movie";
 import {
   getSavedMovieForTitle,
   getCurrentUserId,
-  getEffectivePreferences,
   patchMovieInteraction,
   rateMovie,
 } from "@/lib/supabase/core";
@@ -24,6 +23,16 @@ interface TrailerDialogProps {
   onInteractionChange?: (interaction: SavedMovie) => void;
   onClose: () => void;
 }
+
+type TrailerStatus = "loading" | "ready" | "no_trailer" | "error";
+
+type TrailerResponse = {
+  status: Exclude<TrailerStatus, "loading">;
+  youtubeKey: string | null;
+  source: "tmdb" | "youtube" | "none";
+  title: string;
+  releaseYear: number | null;
+};
 
 export default function TrailerDialog({
   movieId,
@@ -40,40 +49,58 @@ export default function TrailerDialog({
   const [rating, setRating] = useState<number | null>(null);
   const [ratingSaving, setRatingSaving] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
-  const [preferredLanguages, setPreferredLanguages] = useState<string[]>([]);
+  const [trailerKey, setTrailerKey] = useState<string | null>(null);
+  const [trailerStatus, setTrailerStatus] = useState<TrailerStatus>("loading");
 
   useEffect(() => {
+    let cancelled = false;
+
+    const typeParam = mediaType === "tv" ? "?type=tv" : "";
+    const trailerTypeParam = `?type=${mediaType}`;
+
     (async () => {
+      setTrailerStatus("loading");
+      setTrailerKey(null);
+
       try {
-        const typeParam = mediaType === "tv" ? "?type=tv" : "";
-        const [res, effectivePrefs, existingInteraction] = await Promise.all([
+        const res = await fetch(`/api/trailers/${movieId}${trailerTypeParam}`);
+        if (!res.ok) throw new Error("Trailer lookup failed");
+        const trailerData = (await res.json()) as TrailerResponse;
+        if (cancelled) return;
+        setTrailerKey(trailerData.youtubeKey ?? null);
+        setTrailerStatus(trailerData.status);
+      } catch (err) {
+        console.error("Failed to fetch trailer:", err);
+        if (!cancelled) setTrailerStatus("error");
+      }
+    })();
+
+    (async () => {
+      setLoading(true);
+      setMovie(null);
+
+      try {
+        const [res, existingInteraction] = await Promise.all([
           fetch(`/api/tmdb/movie/${movieId}${typeParam}`),
-          getEffectivePreferences(),
           getSavedMovieForTitle(movieId, mediaType),
         ]);
         const data = await res.json();
+        if (cancelled) return;
         setMovie(data);
-        setPreferredLanguages(effectivePrefs.preferences.languages);
         setInteraction(existingInteraction);
         setRating(existingInteraction?.rating ?? null);
       } catch (err) {
         console.error("Failed to fetch details:", err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [movieId, mediaType]);
 
-  const officialTrailers = movie?.videos?.results?.filter(
-    (v: Video) =>
-      v.site === "YouTube" &&
-      v.type === "Trailer" &&
-      v.official
-  ) ?? [];
-  const trailer =
-    officialTrailers.find((v) =>
-      preferredLanguages.includes(v.iso_639_1 ?? "")
-    ) ?? officialTrailers[0];
   const displayTitle = movie?.title ?? preview?.title ?? "Cindr pick";
   const displayYear = movie?.release_date?.slice(0, 4) ?? preview?.year ?? "";
   const displayRating = movie?.vote_average
@@ -85,6 +112,12 @@ export default function TrailerDialog({
     (movie?.backdrop_path || movie?.poster_path)
       ? posterUrl(movie.backdrop_path ?? movie.poster_path, "w1280")
       : preview?.posterUrl;
+  const trailerMessage =
+    trailerStatus === "loading"
+      ? "Loading trailer..."
+      : trailerStatus === "error"
+        ? "Trailer unavailable right now"
+        : "No trailer available";
 
   async function handleShare() {
     const path = `/m/${mediaType}/${movieId}`;
@@ -251,12 +284,12 @@ export default function TrailerDialog({
         >
           {movie || preview ? (
             <>
-              {trailer ? (
+              {trailerKey ? (
                 <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
                   <iframe
                     className="absolute inset-0 w-full h-full rounded-t-2xl sm:rounded-t-2xl"
-                    src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1&rel=0`}
-                    title={trailer.name}
+                    src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0`}
+                    title={`${displayTitle} trailer`}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
@@ -271,11 +304,11 @@ export default function TrailerDialog({
                   <div className="absolute inset-0 bg-black/35" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-white/60 text-sm bg-black/50 px-4 py-2 rounded-full">
-                      {loading ? "Loading official trailer..." : "No official trailer available"}
+                      {trailerMessage}
                     </span>
                   </div>
                 </div>
-              ) : loading ? (
+              ) : loading || trailerStatus === "loading" ? (
                 <div className="flex items-center justify-center py-20">
                   <div className="w-8 h-8 border-2 border-[var(--color-cindr)] border-t-transparent rounded-full animate-spin" />
                 </div>
