@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 import {
   getSavedMovies,
+  patchSavedMovieById,
 } from "@/lib/supabase/core";
 import type { SavedMovie } from "@/types/user";
 import AppHeader from "@/components/layout/AppHeader";
@@ -13,8 +15,10 @@ import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 import TrailerDialog from "@/components/discover/TrailerDialog";
 import type { MovieCardData } from "@/types/movie";
 import { posterUrl } from "@/types/movie";
+import { Check, Trash } from "@phosphor-icons/react";
 
 type WatchlistTab = "liked" | "watchlisted" | "favourite" | "watched";
+type WatchlistTabPatch = Partial<Pick<SavedMovie, WatchlistTab>>;
 
 const TABS: { key: WatchlistTab; label: string }[] = [
   { key: "liked", label: "Liked" },
@@ -29,6 +33,9 @@ export default function WatchlistPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<WatchlistTab>("liked");
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkRemoving, setBulkRemoving] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<{
     id: number;
     mediaType: "movie" | "tv";
@@ -51,6 +58,7 @@ export default function WatchlistPage() {
   }, []);
 
   const filtered = movies.filter((m) => m[tab]);
+  const selectedCount = selectedIds.length;
 
   async function handleShare(movie: SavedMovie) {
     const path = `/m/${movie.media_type}/${movie.tmdb_id}`;
@@ -81,6 +89,56 @@ export default function WatchlistPage() {
       if (!exists) return [interaction, ...prev];
       return prev.map((m) => (m.id === interaction.id ? interaction : m));
     });
+  }
+
+  function toggleSelection(movieId: string) {
+    setSelectedIds((current) =>
+      current.includes(movieId)
+        ? current.filter((id) => id !== movieId)
+        : [...current, movieId]
+    );
+  }
+
+  function handleCardClick(movie: SavedMovie) {
+    if (selectionMode) {
+      toggleSelection(movie.id);
+      return;
+    }
+    openMovie(movie);
+  }
+
+  function handleTabChange(nextTab: WatchlistTab) {
+    setTab(nextTab);
+    setSelectionMode(false);
+    setSelectedIds([]);
+  }
+
+  async function removeSelectedFromCurrentTab() {
+    if (selectedIds.length === 0) return;
+
+    const idsToRemove = selectedIds;
+    const tabPatch = { [tab]: false } as WatchlistTabPatch;
+    setBulkRemoving(true);
+    setMovies((current) =>
+      current.map((movie) =>
+        idsToRemove.includes(movie.id) ? { ...movie, [tab]: false } : movie
+      )
+    );
+    setSelectedIds([]);
+    setSelectionMode(false);
+
+    try {
+      await Promise.all(
+        idsToRemove.map((id) => patchSavedMovieById(id, tabPatch))
+      );
+      setShareMessage("Removed");
+      window.setTimeout(() => setShareMessage(null), 1400);
+    } catch {
+      setShareMessage("Could not remove");
+      window.setTimeout(() => setShareMessage(null), 1800);
+    } finally {
+      setBulkRemoving(false);
+    }
   }
 
   function openMovie(movie: SavedMovie) {
@@ -157,7 +215,25 @@ export default function WatchlistPage() {
       <AppHeader />
       <main className="flex-1 pt-20 pb-24 md:pb-8 px-4 max-w-2xl mx-auto w-full relative z-10">
         <div className="rounded-[2rem] border border-white/10 bg-[#111015]/82 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
-        <h1 className="text-2xl font-bold mb-5">Watchlist</h1>
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold">Watchlist</h1>
+          {filtered.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectionMode((current) => !current);
+                setSelectedIds([]);
+              }}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                selectionMode
+                  ? "border-[var(--color-cindr)]/45 bg-[var(--color-cindr)]/12 text-[var(--color-cindr)]"
+                  : "border-white/10 bg-white/[0.04] text-white/65 hover:text-white"
+              }`}
+            >
+              {selectionMode ? "Done" : "Select"}
+            </button>
+          )}
+        </div>
 
         {shareMessage && (
           <div className="mb-3 rounded-full border border-[var(--color-cindr)]/30 bg-[var(--color-cindr)]/10 px-3 py-2 text-center text-xs text-[var(--color-cindr)]">
@@ -169,7 +245,7 @@ export default function WatchlistPage() {
           {TABS.map((t) => (
             <button
               key={t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => handleTabChange(t.key)}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                 tab === t.key
                   ? "bg-[var(--color-cindr)] text-white"
@@ -180,6 +256,36 @@ export default function WatchlistPage() {
             </button>
           ))}
         </div>
+
+        {selectionMode && filtered.length > 0 && (
+          <div className="mb-4 flex items-center justify-between gap-2 rounded-full border border-white/10 bg-white/[0.035] p-1">
+            <button
+              type="button"
+              onClick={() =>
+                setSelectedIds((current) =>
+                  current.length === filtered.length
+                    ? []
+                    : filtered.map((movie) => movie.id)
+                )
+              }
+              className="rounded-full px-3 py-1.5 text-xs font-semibold text-white/65 transition-colors hover:bg-white/[0.06] hover:text-white"
+            >
+              {selectedCount === filtered.length ? "Clear" : "All"}
+            </button>
+            <span className="text-xs font-medium text-white/45">
+              {selectedCount} selected
+            </span>
+            <button
+              type="button"
+              onClick={removeSelectedFromCurrentTab}
+              disabled={selectedCount === 0 || bulkRemoving}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-cindr)] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-cindr-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Trash size={13} weight="bold" />
+              {bulkRemoving ? "Removing" : "Remove"}
+            </button>
+          </div>
+        )}
 
         {filtered.length === 0 ? (
           <div className="text-center py-16 px-4 text-sm text-[var(--muted)] rounded-[1.5rem] border border-white/10 bg-black/20">
@@ -198,20 +304,26 @@ export default function WatchlistPage() {
                 key={movie.id}
                 role="button"
                 tabIndex={0}
-                onClick={() => openMovie(movie)}
+                onClick={() => handleCardClick(movie)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    openMovie(movie);
+                    handleCardClick(movie);
                   }
                 }}
-                className="group relative aspect-[2/3] cursor-pointer overflow-hidden rounded-xl border border-[var(--border-color)] transition-colors hover:border-[var(--color-cindr)]/45"
+                className={`group relative aspect-[2/3] cursor-pointer overflow-hidden rounded-xl border transition-colors ${
+                  selectedIds.includes(movie.id)
+                    ? "border-[var(--color-cindr)]/80"
+                    : "border-[var(--border-color)] hover:border-[var(--color-cindr)]/45"
+                }`}
               >
                 {movie.poster_path ? (
-                  <img
+                  <Image
                     src={`https://image.tmdb.org/t/p/w300${movie.poster_path}`}
                     alt={movie.title}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="(max-width: 640px) 50vw, 220px"
+                    className="object-cover"
                   />
                 ) : (
                   <div className="w-full h-full bg-[var(--surface)] flex items-center justify-center text-[var(--muted)] text-xs p-2 text-center">
@@ -244,26 +356,42 @@ export default function WatchlistPage() {
                   </div>
                 </div>
 
-                <div className="absolute inset-0 bg-black/55 opacity-0 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2 group-hover:opacity-100 group-focus-within:opacity-100">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openMovie(movie);
-                    }}
-                    className="w-full text-[10px] py-1.5 rounded-lg border border-white/15 bg-white/10 text-white font-medium"
+                {selectionMode && (
+                  <div
+                    className={`absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full border backdrop-blur-md transition-colors ${
+                      selectedIds.includes(movie.id)
+                        ? "border-[var(--color-cindr)] bg-[var(--color-cindr)] text-white"
+                        : "border-white/20 bg-black/35 text-white/45"
+                    }`}
                   >
-                    Open details
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleShare(movie);
-                    }}
-                    className="w-full text-[10px] py-1.5 rounded-lg bg-white/10 text-white font-medium"
-                  >
-                    Share
-                  </button>
-                </div>
+                    {selectedIds.includes(movie.id) && (
+                      <Check size={15} weight="bold" />
+                    )}
+                  </div>
+                )}
+
+                {!selectionMode && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/55 p-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openMovie(movie);
+                      }}
+                      className="w-full rounded-lg border border-white/15 bg-white/10 py-1.5 text-[10px] font-medium text-white"
+                    >
+                      Open details
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShare(movie);
+                      }}
+                      className="w-full rounded-lg bg-white/10 py-1.5 text-[10px] font-medium text-white"
+                    >
+                      Share
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
