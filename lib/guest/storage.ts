@@ -11,10 +11,12 @@ const DEFAULT_STATE: GuestState = {
     yearFrom: null,
     yearTo: null,
     people: [],
+    discoverMode: "taste",
+    era: "any",
+    runtimePreference: "any",
   },
   onboardingComplete: false,
   swipedIds: [],
-  isAdult: false,
 };
 
 function isBrowser(): boolean {

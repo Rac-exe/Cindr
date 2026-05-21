@@ -7,19 +7,24 @@ import {
   addSwipedId,
   clearSwipedIds,
   removeSwipedId,
+  savePreferences,
 } from "@/lib/guest/storage";
 import {
+  getCurrentUserId,
   getEffectivePreferences,
   likeMovie,
   patchMovieInteraction,
+  upsertPreferences,
 } from "@/lib/supabase/core";
 import type { Movie, MovieCardData } from "@/types/movie";
 import { posterUrl } from "@/types/movie";
+import type { DiscoverMode, UserPreferences } from "@/types/user";
 import SwipeDeck from "@/components/discover/SwipeDeck";
 import TrailerDialog from "@/components/discover/TrailerDialog";
 import AppHeader from "@/components/layout/AppHeader";
 import MobileNav from "@/components/layout/MobileNav";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
+import { prewarmTrailers } from "@/lib/client/trailerCache";
 
 const GENRE_MAP: Record<number, string> = {
   28: "Action",
@@ -53,17 +58,33 @@ const MAX_TMDB_DISCOVER_PAGE = 500;
 const SWIPED_RESHUFFLE_THRESHOLD = 200;
 const INITIAL_RANDOM_BATCH_RETRIES = 1;
 const RESHUFFLE_RANDOM_BATCH_RETRIES = 2;
+const PREFETCH_CARD_THRESHOLD = 8;
+const PREWARM_CARD_COUNT = 3;
 const DISCOVER_MESSAGES = {
   finding: "Finding something you'll love...",
+  randomFinding: "Rolling a random reel...",
   tryingBatch: "Trying another batch...",
   refreshingSeen: "Refreshing seen movies...",
   checkingNext: "Checking the next batch...",
-  specificFilters: "Your filters are very specific.",
+  specificFilters: "Your hard filters are very specific. Try widening years, genres, or people.",
 } as const;
 
 type DiscoverBatchResult = {
   cards: MovieCardData[];
   lastFetchedPage: number;
+};
+
+const DEFAULT_DISCOVER_PREFERENCES: UserPreferences = {
+  languages: [],
+  genres: [],
+  moods: [],
+  contentTypes: [],
+  yearFrom: null,
+  yearTo: null,
+  people: [],
+  discoverMode: "taste",
+  era: "any",
+  runtimePreference: "any",
 };
 
 function randomDiscoverPage(): number {
@@ -80,6 +101,21 @@ function randomDiscoverPages(count: number): number[] {
 
 function shuffleCards<T>(items: T[]): T[] {
   return [...items].sort(() => Math.random() - 0.5);
+}
+
+function findingMessage(mode: DiscoverMode): string {
+  return mode === "random"
+    ? DISCOVER_MESSAGES.randomFinding
+    : DISCOVER_MESSAGES.finding;
+}
+
+function hasHardFilters(preferences: UserPreferences): boolean {
+  return (
+    preferences.genres.length > 0 ||
+    Boolean(preferences.yearFrom) ||
+    Boolean(preferences.yearTo) ||
+    preferences.people.length > 0
+  );
 }
 
 function toCardData(movie: Movie): MovieCardData {
@@ -100,24 +136,39 @@ function toCardData(movie: Movie): MovieCardData {
 
 function PosterSkeleton({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div className="relative h-[min(62dvh,520px)] w-[min(90vw,390px)] overflow-hidden rounded-[2rem] border border-white/10 bg-[var(--surface)] shadow-[0_28px_90px_rgba(0,0,0,0.55)] sm:h-[min(70dvh,620px)] sm:w-[min(92vw,430px)] md:h-[min(74dvh,680px)] md:w-[min(92vw,440px)]">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-transparent" />
-        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-        <div className="absolute inset-0 rounded-[2rem] ring-1 ring-inset ring-[var(--color-cindr)]/20" />
+    <div className="flex flex-col items-center gap-3">
+      <div className="relative h-[min(58dvh,500px)] w-[min(86vw,360px)] overflow-hidden rounded-[1.75rem] border border-[var(--color-cindr)]/18 bg-[#111015]/86 shadow-[0_24px_80px_rgba(0,0,0,0.5)] sm:h-[min(66dvh,580px)] sm:w-[min(88vw,390px)] md:h-[min(70dvh,620px)]">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(216,90,48,0.18),transparent_32%),linear-gradient(115deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015),rgba(216,90,48,0.08))]" />
+        <div className="absolute left-5 right-5 top-5 flex justify-between opacity-35">
+          {[0, 1, 2, 3, 4].map((dot) => (
+            <span
+              key={dot}
+              className="h-2 w-5 rounded-sm border border-[var(--color-cindr)]/60"
+            />
+          ))}
+        </div>
+        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.25s_infinite] bg-gradient-to-r from-transparent via-white/12 to-transparent" />
+        <div className="absolute inset-x-12 top-1/2 h-20 -translate-y-1/2 rounded-full bg-[var(--color-cindr)]/8 blur-2xl" />
+        <div className="absolute inset-0 rounded-[1.75rem] ring-1 ring-inset ring-white/10" />
         <div className="absolute bottom-6 left-6 right-6 space-y-3">
-          <div className="h-3 w-24 rounded-full bg-white/10" />
+          <div className="h-1 w-12 rounded-full bg-[var(--color-cindr)]/80" />
           <div className="h-8 w-3/4 rounded-lg bg-white/10" />
-          <div className="h-3 w-full rounded-full bg-white/10" />
-          <div className="h-3 w-2/3 rounded-full bg-white/10" />
+          <div className="h-3 w-full rounded-full bg-white/8" />
+          <div className="h-3 w-2/3 rounded-full bg-white/8" />
         </div>
       </div>
-      <p className="text-sm text-[var(--muted)]">{message}</p>
+      <p className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-[11px] font-medium text-white/50">
+        {message}
+      </p>
     </div>
   );
 }
 
 export default function DiscoverPage() {
+  const [preferences, setPreferences] = useState<UserPreferences>(
+    DEFAULT_DISCOVER_PREFERENCES
+  );
+  const [preferencesReady, setPreferencesReady] = useState(false);
   const [cards, setCards] = useState<MovieCardData[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -126,6 +177,7 @@ export default function DiscoverPage() {
     id: number;
     mediaType: "movie" | "tv";
     preview: MovieCardData;
+    initialInteraction?: { liked: boolean };
   } | null>(null);
   const [lastSwipe, setLastSwipe] = useState<{
     card: MovieCardData;
@@ -137,34 +189,49 @@ export default function DiscoverPage() {
     cardId: number;
   } | undefined>();
   const swipeNonce = useRef(0);
+  const modalHistoryPushed = useRef(false);
+  const isLoadingMoreRef = useRef(false);
 
-  const fetchMovies = useCallback(async (pageNum: number, ignoreSwiped = false) => {
+  const fetchMovies = useCallback(async (
+    pageNum: number,
+    activePreferences: UserPreferences,
+    ignoreSwiped = false,
+    signal?: AbortSignal
+  ) => {
     try {
-      const { preferences, isAdult } = await getEffectivePreferences();
       const guest = getGuestState();
       const params = new URLSearchParams();
-      if (preferences.languages.length > 0) {
-        params.set("languages", preferences.languages.join(","));
+      const mode = activePreferences.discoverMode;
+
+      params.set("mode", mode);
+      if (mode === "taste" && activePreferences.languages.length > 0) {
+        params.set("languages", activePreferences.languages.join(","));
       }
-      if (preferences.moods.length > 0) {
-        params.set("moods", preferences.moods.join(","));
+      if (mode === "taste" && activePreferences.moods.length > 0) {
+        params.set("moods", activePreferences.moods.join(","));
       }
-      if (preferences.genres.length > 0) {
-        params.set("genres", preferences.genres.join(","));
+      if (activePreferences.genres.length > 0) {
+        params.set("genres", activePreferences.genres.join(","));
       }
-      if (preferences.contentTypes.length > 0) {
-        params.set("contentTypes", preferences.contentTypes.join(","));
+      if (activePreferences.contentTypes.length > 0) {
+        params.set("contentTypes", activePreferences.contentTypes.join(","));
       }
-      if (preferences.yearFrom) {
-        params.set("yearFrom", String(preferences.yearFrom));
+      if (activePreferences.yearFrom) {
+        params.set("yearFrom", String(activePreferences.yearFrom));
       }
-      if (preferences.yearTo) {
-        params.set("yearTo", String(preferences.yearTo));
+      if (activePreferences.yearTo) {
+        params.set("yearTo", String(activePreferences.yearTo));
       }
-      const actorIds = preferences.people
+      if (mode === "taste" && activePreferences.era !== "any") {
+        params.set("era", activePreferences.era);
+      }
+      if (mode === "taste" && activePreferences.runtimePreference !== "any") {
+        params.set("length", activePreferences.runtimePreference);
+      }
+      const actorIds = activePreferences.people
         .filter((person) => person.role === "actor")
         .map((person) => person.id);
-      const directorIds = preferences.people
+      const directorIds = activePreferences.people
         .filter((person) => person.role === "director")
         .map((person) => person.id);
       if (actorIds.length > 0) {
@@ -173,12 +240,11 @@ export default function DiscoverPage() {
       if (directorIds.length > 0) {
         params.set("directors", directorIds.join("|"));
       }
-      if (isAdult) {
-        params.set("includeAdult", "true");
-      }
       params.set("page", String(pageNum));
 
-      const res = await fetch(`/api/tmdb/discover?${params.toString()}`);
+      const res = await fetch(`/api/tmdb/discover?${params.toString()}`, {
+        signal,
+      });
       const data = await res.json();
 
       if (data.results) {
@@ -190,18 +256,26 @@ export default function DiscoverPage() {
       }
       return [];
     } catch (err) {
+      if ((err as Error).name === "AbortError") return [];
       console.error("Failed to fetch:", err);
       return [];
     }
   }, []);
 
   const fetchBatch = useCallback(
-    async (startPage: number, ignoreSwiped = false) => {
+    async (
+      startPage: number,
+      activePreferences: UserPreferences,
+      ignoreSwiped = false,
+      signal?: AbortSignal
+    ) => {
       const pages = [startPage, startPage + 1, startPage + 2].map(
         normalizeDiscoverPage
       );
       const batches = await Promise.all(
-        pages.map((pageNum) => fetchMovies(pageNum, ignoreSwiped))
+        pages.map((pageNum) =>
+          fetchMovies(pageNum, activePreferences, ignoreSwiped, signal)
+        )
       );
       const seen = new Set<number>();
       const deduped = batches.flat().filter((card) => {
@@ -217,13 +291,20 @@ export default function DiscoverPage() {
   const fetchFirstAvailableBatch = useCallback(
     async (
       startPages: number[],
-      ignoreSwiped = false
+      activePreferences: UserPreferences,
+      ignoreSwiped = false,
+      signal?: AbortSignal
     ): Promise<DiscoverBatchResult> => {
       let lastFetchedPage = normalizeDiscoverPage((startPages[0] ?? 1) + 2);
 
       for (const startPage of startPages) {
         const normalizedStartPage = normalizeDiscoverPage(startPage);
-        const cards = await fetchBatch(normalizedStartPage, ignoreSwiped);
+        const cards = await fetchBatch(
+          normalizedStartPage,
+          activePreferences,
+          ignoreSwiped,
+          signal
+        );
         lastFetchedPage = normalizeDiscoverPage(normalizedStartPage + 2);
 
         if (cards.length > 0) {
@@ -237,34 +318,80 @@ export default function DiscoverPage() {
   );
 
   useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const { preferences: effectivePreferences } = await getEffectivePreferences();
+      if (cancelled) return;
+      setPreferences({
+        ...DEFAULT_DISCOVER_PREFERENCES,
+        ...effectivePreferences,
+      });
+      setPreferencesReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!preferencesReady) return;
+
+    const controller = new AbortController();
+
     (async () => {
       setLoading(true);
-      setMessage(DISCOVER_MESSAGES.finding);
+      setMessage(findingMessage(preferences.discoverMode));
       const guest = getGuestState();
-      let batch = await fetchFirstAvailableBatch([1]);
+      const initialPages =
+        preferences.discoverMode === "random"
+          ? randomDiscoverPages(Math.max(1, INITIAL_RANDOM_BATCH_RETRIES))
+          : [1];
+      let batch = await fetchFirstAvailableBatch(
+        initialPages,
+        preferences,
+        false,
+        controller.signal
+      );
 
       if (batch.cards.length === 0) {
         setMessage(DISCOVER_MESSAGES.tryingBatch);
         batch = await fetchFirstAvailableBatch(
-          randomDiscoverPages(INITIAL_RANDOM_BATCH_RETRIES)
+          randomDiscoverPages(INITIAL_RANDOM_BATCH_RETRIES),
+          preferences,
+          false,
+          controller.signal
         );
       }
 
       if (batch.cards.length === 0 && guest.swipedIds.length > 0) {
         setMessage(DISCOVER_MESSAGES.refreshingSeen);
         clearSwipedIds();
-        batch = await fetchFirstAvailableBatch([1], true);
+        batch = await fetchFirstAvailableBatch(
+          initialPages,
+          preferences,
+          true,
+          controller.signal
+        );
       }
 
       if (batch.cards.length === 0) {
-        setMessage(DISCOVER_MESSAGES.specificFilters);
+        setMessage(
+          hasHardFilters(preferences)
+            ? DISCOVER_MESSAGES.specificFilters
+            : DISCOVER_MESSAGES.tryingBatch
+        );
       }
 
+      if (controller.signal.aborted) return;
       setCards(batch.cards);
       setPage(batch.lastFetchedPage);
       setLoading(false);
     })();
-  }, [fetchFirstAvailableBatch]);
+
+    return () => controller.abort();
+  }, [fetchFirstAvailableBatch, preferences, preferencesReady]);
 
   const reshuffleDeck = useCallback(async () => {
     setLoading(true);
@@ -282,49 +409,106 @@ export default function DiscoverPage() {
       setMessage(DISCOVER_MESSAGES.tryingBatch);
     }
 
-    let batch = await fetchFirstAvailableBatch(sequentialStartPages);
+    const candidatePages =
+      preferences.discoverMode === "random"
+        ? randomDiscoverPages(RESHUFFLE_RANDOM_BATCH_RETRIES)
+        : sequentialStartPages;
+
+    let batch = await fetchFirstAvailableBatch(candidatePages, preferences);
 
     if (batch.cards.length === 0) {
       setMessage(DISCOVER_MESSAGES.tryingBatch);
       batch = await fetchFirstAvailableBatch(
-        randomDiscoverPages(RESHUFFLE_RANDOM_BATCH_RETRIES)
+        randomDiscoverPages(RESHUFFLE_RANDOM_BATCH_RETRIES),
+        preferences
       );
     }
 
     if (batch.cards.length === 0 && guest.swipedIds.length > 0) {
       setMessage(DISCOVER_MESSAGES.refreshingSeen);
       clearSwipedIds();
-      batch = await fetchFirstAvailableBatch(sequentialStartPages, true);
+      batch = await fetchFirstAvailableBatch(candidatePages, preferences, true);
     }
 
     if (batch.cards.length === 0) {
-      setMessage(DISCOVER_MESSAGES.specificFilters);
+      setMessage(
+        hasHardFilters(preferences)
+          ? DISCOVER_MESSAGES.specificFilters
+          : DISCOVER_MESSAGES.tryingBatch
+      );
     }
 
     setCards(batch.cards);
     setPage(batch.lastFetchedPage);
     setLoading(false);
-  }, [fetchFirstAvailableBatch, page]);
+  }, [fetchFirstAvailableBatch, page, preferences]);
 
   async function loadMore(randomize = false) {
+    if (isLoadingMoreRef.current) return;
+    isLoadingMoreRef.current = true;
     const nextPage = randomize ? randomDiscoverPage() : page + 1;
-    const newCards = await fetchBatch(nextPage);
-    setPage(normalizeDiscoverPage(nextPage + 2));
-    setCards((prev) => [...prev, ...newCards]);
+    try {
+      const newCards = await fetchBatch(nextPage, preferences);
+      setPage(normalizeDiscoverPage(nextPage + 2));
+      setCards((prev) => {
+        const seen = new Set(prev.map((card) => card.id));
+        const uniqueNewCards = newCards.filter((card) => {
+          if (seen.has(card.id)) return false;
+          seen.add(card.id);
+          return true;
+        });
+        return [...prev, ...uniqueNewCards];
+      });
+    } finally {
+      isLoadingMoreRef.current = false;
+    }
   }
 
-  function handleSwipe(id: number, direction: "left" | "right") {
-    setSwipeRequest(undefined);
+  async function handleModeChange(nextMode: DiscoverMode) {
+    if (nextMode === preferences.discoverMode) return;
+
+    const nextPreferences = {
+      ...preferences,
+      discoverMode: nextMode,
+    };
+    setPreferences(nextPreferences);
+    setCards([]);
+    setLastSwipe(null);
+    setPage(1);
+    setMessage(findingMessage(nextMode));
+    savePreferences({ discoverMode: nextMode });
+
+    const userId = await getCurrentUserId();
+    if (userId) {
+      await upsertPreferences({ discoverMode: nextMode });
+    }
+  }
+
+  function openTrailerDialog(movieSelection: {
+    id: number;
+    mediaType: "movie" | "tv";
+    preview: MovieCardData;
+    initialInteraction?: { liked: boolean };
+  }) {
+    if (!modalHistoryPushed.current) {
+      window.history.pushState({ cindrTrailer: true }, "", window.location.href);
+      modalHistoryPushed.current = true;
+    }
+    setSelectedMovie(movieSelection);
+  }
+
+  function handleSwipeStart(id: number, direction: "left" | "right") {
     addSwipedId(id);
     const card = cards.find((c) => c.id === id);
     if (card) {
       setLastSwipe({ card, direction });
     }
     if (direction === "right" && card) {
-      setSelectedMovie({
+      openTrailerDialog({
         id,
         mediaType: card.media_type ?? "movie",
         preview: card,
+        initialInteraction: { liked: true },
       });
       void likeMovie({
         tmdb_id: id,
@@ -333,12 +517,16 @@ export default function DiscoverPage() {
         poster_path: card.posterPath ?? null,
       });
     }
+  }
+
+  function handleSwipe(id: number) {
+    setSwipeRequest(undefined);
     setCards((prev) => prev.filter((c) => c.id !== id));
 
     const remainingCards = cards.length - 1;
     if (remainingCards <= 0) {
       void reshuffleDeck();
-    } else if (remainingCards <= 3) {
+    } else if (remainingCards <= PREFETCH_CARD_THRESHOLD) {
       void loadMore();
     }
   }
@@ -389,6 +577,36 @@ export default function DiscoverPage() {
   }, [cards.length, loading, message, reshuffleDeck]);
 
   useEffect(() => {
+    prewarmTrailers(
+      cards.slice(0, PREWARM_CARD_COUNT).map((card) => ({
+        tmdbId: card.id,
+        mediaType: card.media_type ?? "movie",
+      }))
+    );
+  }, [cards]);
+
+  useEffect(() => {
+    function handlePopState() {
+      if (!modalHistoryPushed.current) return;
+      modalHistoryPushed.current = false;
+      setSelectedMovie(null);
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  function closeTrailerDialog() {
+    if (modalHistoryPushed.current) {
+      modalHistoryPushed.current = false;
+      setSelectedMovie(null);
+      window.history.back();
+      return;
+    }
+    setSelectedMovie(null);
+  }
+
+  useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape" && selectedMovie) {
         setSelectedMovie(null);
@@ -413,6 +631,35 @@ export default function DiscoverPage() {
       <CinematicBackdrop density="subtle" />
       <AppHeader />
       <main className="flex-1 flex flex-col items-center justify-center pt-14 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pt-16 md:pb-8 px-4 relative z-10 overflow-hidden">
+        <div className="group mb-2 flex w-full max-w-[440px] flex-col items-center">
+          <div className="grid w-40 grid-cols-2 rounded-full border border-white/10 bg-[#111015]/72 p-0.5 shadow-[0_12px_34px_rgba(0,0,0,0.22)] backdrop-blur-md">
+            {(["taste", "random"] as DiscoverMode[]).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => void handleModeChange(mode)}
+                disabled={!preferencesReady || loading}
+                title={
+                  mode === "random"
+                    ? "Random ignores taste signals but keeps explicit hard filters."
+                    : "Taste uses your saved preferences and advanced filters."
+                }
+                className={`rounded-full px-2.5 py-1.5 text-[10px] font-bold capitalize tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                  preferences.discoverMode === mode
+                    ? "bg-[var(--color-cindr)] text-white shadow-[0_0_18px_rgba(216,90,48,0.28)]"
+                    : "text-white/48 hover:bg-white/[0.05] hover:text-white"
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 max-w-[17rem] rounded-full border border-white/10 bg-black/30 px-3 py-1 text-center text-[10px] leading-relaxed text-white/45 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+            {preferences.discoverMode === "random"
+              ? "Random skips taste, keeps explicit filters."
+              : "Taste follows preferences first."}
+          </p>
+        </div>
         <AnimatePresence mode="wait">
           {loading ? (
             <motion.div
@@ -439,10 +686,11 @@ export default function DiscoverPage() {
               key="deck"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-sm"
+              className="w-full max-w-[440px]"
             >
               <SwipeDeck
                 cards={cards}
+                onSwipeStart={handleSwipeStart}
                 onSwipe={handleSwipe}
                 swipeRequest={swipeRequest}
               />
@@ -462,10 +710,12 @@ export default function DiscoverPage() {
 
       {selectedMovie && (
         <TrailerDialog
+          key={`${selectedMovie.mediaType}-${selectedMovie.id}`}
           movieId={selectedMovie.id}
           mediaType={selectedMovie.mediaType}
           preview={selectedMovie.preview}
-          onClose={() => setSelectedMovie(null)}
+          initialInteraction={selectedMovie.initialInteraction}
+          onClose={closeTrailerDialog}
         />
       )}
     </div>

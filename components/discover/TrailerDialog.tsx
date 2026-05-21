@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookmarkSimple, Eye, Heart, Star } from "@phosphor-icons/react";
@@ -12,6 +13,12 @@ import {
   patchMovieInteraction,
   rateMovie,
 } from "@/lib/supabase/core";
+import {
+  fetchMovieDetailsCached,
+  fetchTrailerCached,
+  getCachedMovieDetails,
+  getCachedTrailer,
+} from "@/lib/client/trailerCache";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 import type { SavedMovie } from "@/types/user";
 
@@ -19,53 +26,54 @@ interface TrailerDialogProps {
   movieId: number;
   mediaType?: "movie" | "tv";
   preview?: MovieCardData;
+  initialInteraction?: InteractionFlags;
   sourceList?: "liked" | "watchlisted" | "favourite" | "watched";
   onInteractionChange?: (interaction: SavedMovie) => void;
   onClose: () => void;
 }
 
 type TrailerStatus = "loading" | "ready" | "no_trailer" | "error";
-
-type TrailerResponse = {
-  status: Exclude<TrailerStatus, "loading">;
-  youtubeKey: string | null;
-  source: "tmdb" | "youtube" | "none";
-  title: string;
-  releaseYear: number | null;
-};
+type InteractionFlags = Partial<
+  Pick<SavedMovie, "liked" | "watchlisted" | "favourite" | "watched" | "rating">
+>;
 
 export default function TrailerDialog({
   movieId,
   mediaType = "movie",
   preview,
+  initialInteraction,
   onInteractionChange,
   onClose,
 }: TrailerDialogProps) {
   const router = useRouter();
-  const [movie, setMovie] = useState<Movie | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cachedTrailer = getCachedTrailer(mediaType, movieId);
+  const cachedMovie = getCachedMovieDetails(mediaType, movieId);
+  const [movie, setMovie] = useState<Movie | null>(cachedMovie);
+  const [loading, setLoading] = useState(!cachedMovie);
   const [saving, setSaving] = useState(false);
   const [interaction, setInteraction] = useState<SavedMovie | null>(null);
+  const [optimisticInteraction, setOptimisticInteraction] =
+    useState<InteractionFlags | null>(initialInteraction ?? null);
   const [rating, setRating] = useState<number | null>(null);
   const [ratingSaving, setRatingSaving] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
-  const [trailerKey, setTrailerKey] = useState<string | null>(null);
-  const [trailerStatus, setTrailerStatus] = useState<TrailerStatus>("loading");
+  const [trailerKey, setTrailerKey] = useState<string | null>(
+    cachedTrailer?.youtubeKey ?? null
+  );
+  const [trailerStatus, setTrailerStatus] = useState<TrailerStatus>(
+    cachedTrailer?.status ?? "loading"
+  );
 
   useEffect(() => {
     let cancelled = false;
 
-    const typeParam = mediaType === "tv" ? "?type=tv" : "";
-    const trailerTypeParam = `?type=${mediaType}`;
-
     (async () => {
-      setTrailerStatus("loading");
-      setTrailerKey(null);
+      const cached = getCachedTrailer(mediaType, movieId);
+      setTrailerStatus(cached?.status ?? "loading");
+      setTrailerKey(cached?.youtubeKey ?? null);
 
       try {
-        const res = await fetch(`/api/trailers/${movieId}${trailerTypeParam}`);
-        if (!res.ok) throw new Error("Trailer lookup failed");
-        const trailerData = (await res.json()) as TrailerResponse;
+        const trailerData = await fetchTrailerCached(mediaType, movieId);
         if (cancelled) return;
         setTrailerKey(trailerData.youtubeKey ?? null);
         setTrailerStatus(trailerData.status);
@@ -76,19 +84,20 @@ export default function TrailerDialog({
     })();
 
     (async () => {
-      setLoading(true);
-      setMovie(null);
+      const cachedDetails = getCachedMovieDetails(mediaType, movieId);
+      setLoading(!cachedDetails);
+      setMovie(cachedDetails);
+      setOptimisticInteraction(initialInteraction ?? null);
 
       try {
-        const [res, existingInteraction] = await Promise.all([
-          fetch(`/api/tmdb/movie/${movieId}${typeParam}`),
+        const [movieDetails, existingInteraction] = await Promise.all([
+          fetchMovieDetailsCached(mediaType, movieId),
           getSavedMovieForTitle(movieId, mediaType),
         ]);
-        const data = await res.json();
         if (cancelled) return;
-        setMovie(data);
+        setMovie(movieDetails);
         setInteraction(existingInteraction);
-        setRating(existingInteraction?.rating ?? null);
+        setRating(existingInteraction?.rating ?? initialInteraction?.rating ?? null);
       } catch (err) {
         console.error("Failed to fetch details:", err);
       } finally {
@@ -99,7 +108,7 @@ export default function TrailerDialog({
     return () => {
       cancelled = true;
     };
-  }, [movieId, mediaType]);
+  }, [initialInteraction, movieId, mediaType]);
 
   const displayTitle = movie?.title ?? preview?.title ?? "Cindr pick";
   const displayYear = movie?.release_date?.slice(0, 4) ?? preview?.year ?? "";
@@ -118,6 +127,7 @@ export default function TrailerDialog({
       : trailerStatus === "error"
         ? "Trailer unavailable right now"
         : "No trailer available";
+  const activeInteraction = interaction ?? optimisticInteraction;
 
   async function handleShare() {
     const path = `/m/${mediaType}/${movieId}`;
@@ -176,6 +186,7 @@ export default function TrailerDialog({
       return;
     }
     setSaving(true);
+    setOptimisticInteraction({ ...(activeInteraction ?? {}), ...patch });
     const nextInteraction = await patchMovieInteraction(
       {
         tmdb_id: movieId,
@@ -296,10 +307,12 @@ export default function TrailerDialog({
                 </div>
               ) : previewImage ? (
                 <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
-                  <img
+                  <Image
                     src={previewImage}
                     alt={displayTitle}
-                    className="absolute inset-0 w-full h-full object-cover rounded-t-2xl"
+                    fill
+                    sizes="(max-width: 640px) 100vw, 512px"
+                    className="object-cover"
                   />
                   <div className="absolute inset-0 bg-black/35" />
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -403,6 +416,13 @@ export default function TrailerDialog({
                     ))}
                   </div>
                 )}
+                {loading && !movie?.genres?.length && (
+                  <div className="mb-3 flex gap-1.5" aria-label="Loading details">
+                    <span className="h-6 w-16 animate-pulse rounded-full bg-white/10" />
+                    <span className="h-6 w-20 animate-pulse rounded-full bg-white/10" />
+                    <span className="h-6 w-12 animate-pulse rounded-full bg-white/10" />
+                  </div>
+                )}
 
                 {displayOverview && (
                   <p className="text-sm text-[var(--muted)] leading-relaxed mb-4">
@@ -415,79 +435,81 @@ export default function TrailerDialog({
                     disabled={saving}
                     onClick={() =>
                       patchCurrentInteraction({
-                        watchlisted: !interaction?.watchlisted,
+                        watchlisted: !activeInteraction?.watchlisted,
                       })
                     }
-                    aria-label={interaction?.watchlisted ? "Remove from watchlist" : "Add to watchlist"}
-                    title={interaction?.watchlisted ? "Remove from watchlist" : "Add to watchlist"}
+                    aria-label={activeInteraction?.watchlisted ? "Remove from watchlist" : "Add to watchlist"}
+                    title={activeInteraction?.watchlisted ? "Remove from watchlist" : "Add to watchlist"}
                     className={`grid h-12 w-full place-items-center rounded-xl border transition-colors disabled:opacity-50 ${
-                      interaction?.watchlisted
+                      activeInteraction?.watchlisted
                         ? "border-red-400/60 bg-red-500/15 text-red-200 shadow-[0_0_18px_rgba(248,113,113,0.16)]"
                         : "border-[var(--border-color)] text-white/75 hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-100"
                     }`}
                   >
                     <BookmarkSimple
                       size={21}
-                      weight={interaction?.watchlisted ? "fill" : "regular"}
+                      weight={activeInteraction?.watchlisted ? "fill" : "regular"}
                     />
                   </button>
                   <button
                     disabled={saving}
                     onClick={() =>
                       patchCurrentInteraction({
-                        favourite: !interaction?.favourite,
+                        favourite: !activeInteraction?.favourite,
                       })
                     }
-                    aria-label={interaction?.favourite ? "Remove favourite" : "Add favourite"}
-                    title={interaction?.favourite ? "Remove favourite" : "Add favourite"}
+                    aria-label={activeInteraction?.favourite ? "Remove favourite" : "Add favourite"}
+                    title={activeInteraction?.favourite ? "Remove favourite" : "Add favourite"}
                     className={`grid h-12 w-full place-items-center rounded-xl border transition-colors disabled:opacity-50 ${
-                      interaction?.favourite
+                      activeInteraction?.favourite
                         ? "border-red-400/60 bg-red-500/15 text-red-200 shadow-[0_0_18px_rgba(248,113,113,0.16)]"
                         : "border-[var(--border-color)] text-white/75 hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-100"
                     }`}
                   >
                     <Star
                       size={21}
-                      weight={interaction?.favourite ? "fill" : "regular"}
+                      weight={activeInteraction?.favourite ? "fill" : "regular"}
                     />
                   </button>
                   <button
                     disabled={saving}
                     onClick={() =>
                       patchCurrentInteraction({
-                        watched: !interaction?.watched,
-                        watchlisted: interaction?.watched ? interaction.watchlisted : false,
+                        watched: !activeInteraction?.watched,
+                        watchlisted: activeInteraction?.watched
+                          ? activeInteraction.watchlisted
+                          : false,
                       })
                     }
-                    aria-label={interaction?.watched ? "Mark as unwatched" : "Mark as watched"}
-                    title={interaction?.watched ? "Mark as unwatched" : "Mark as watched"}
+                    aria-label={activeInteraction?.watched ? "Mark as unwatched" : "Mark as watched"}
+                    title={activeInteraction?.watched ? "Mark as unwatched" : "Mark as watched"}
                     className={`grid h-12 w-full place-items-center rounded-xl border transition-colors disabled:opacity-50 ${
-                      interaction?.watched
+                      activeInteraction?.watched
                         ? "border-red-400/60 bg-red-500/15 text-red-200 shadow-[0_0_18px_rgba(248,113,113,0.16)]"
                         : "border-[var(--border-color)] text-white/75 hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-100"
                     }`}
                   >
                     <Eye
                       size={21}
-                      weight={interaction?.watched ? "fill" : "regular"}
+                      weight={activeInteraction?.watched ? "fill" : "regular"}
                     />
                   </button>
                   <button
                     disabled={saving}
                     onClick={() =>
-                      patchCurrentInteraction({ liked: !interaction?.liked })
+                      patchCurrentInteraction({ liked: !activeInteraction?.liked })
                     }
-                    aria-label={interaction?.liked ? "Unlike" : "Like"}
-                    title={interaction?.liked ? "Unlike" : "Like"}
+                    aria-label={activeInteraction?.liked ? "Unlike" : "Like"}
+                    title={activeInteraction?.liked ? "Unlike" : "Like"}
                     className={`grid h-12 w-full place-items-center rounded-xl border transition-colors disabled:opacity-50 ${
-                      interaction?.liked
+                      activeInteraction?.liked
                         ? "border-red-400/60 bg-red-500/15 text-red-200 shadow-[0_0_18px_rgba(248,113,113,0.16)]"
                         : "border-[var(--border-color)] text-white/75 hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-100"
                     }`}
                   >
                     <Heart
                       size={21}
-                      weight={interaction?.liked ? "fill" : "regular"}
+                      weight={activeInteraction?.liked ? "fill" : "regular"}
                     />
                   </button>
                 </div>
@@ -537,14 +559,25 @@ export default function TrailerDialog({
                           rel="noreferrer"
                           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-[var(--border-color)] transition-colors hover:border-[var(--color-cindr)]/45 hover:bg-white/10"
                         >
-                          <img
+                          <Image
                             src={`https://image.tmdb.org/t/p/w45${p.logo_path}`}
                             alt={p.provider_name}
-                            className="w-5 h-5 rounded"
+                            width={20}
+                            height={20}
+                            className="rounded"
                           />
                           <span className="text-xs">{p.provider_name}</span>
                         </a>
                       ))}
+                    </div>
+                  </div>
+                )}
+                {loading && displayProviders.length === 0 && (
+                  <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                    <div className="h-3 w-28 animate-pulse rounded-full bg-white/10" />
+                    <div className="mt-3 flex gap-2">
+                      <span className="h-8 w-20 animate-pulse rounded-lg bg-white/8" />
+                      <span className="h-8 w-24 animate-pulse rounded-lg bg-white/8" />
                     </div>
                   </div>
                 )}

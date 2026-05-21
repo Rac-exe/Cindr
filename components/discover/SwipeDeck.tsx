@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import type { MovieCardData } from "@/types/movie";
 import SwipeActions from "./SwipeActions";
@@ -9,11 +10,17 @@ const SWIPE_THRESHOLD = 120;
 
 interface SwipeDeckProps {
   cards: MovieCardData[];
+  onSwipeStart?: (id: number, direction: "left" | "right") => void;
   onSwipe: (id: number, direction: "left" | "right") => void;
   swipeRequest?: { direction: "left" | "right"; nonce: number; cardId: number };
 }
 
-export default function SwipeDeck({ cards, onSwipe, swipeRequest }: SwipeDeckProps) {
+export default function SwipeDeck({
+  cards,
+  onSwipeStart,
+  onSwipe,
+  swipeRequest,
+}: SwipeDeckProps) {
   const visibleCards = cards.slice(0, 3);
   const [actionRequest, setActionRequest] = useState<{
     direction: "left" | "right";
@@ -38,6 +45,7 @@ export default function SwipeDeck({ cards, onSwipe, swipeRequest }: SwipeDeckPro
           key={`${card.media_type ?? "movie"}-${card.id}`}
           card={card}
           index={i}
+          onSwipeStart={onSwipeStart}
           onSwipe={onSwipe}
           isTop={i === 0}
           swipeRequest={i === 0 ? activeRequest : undefined}
@@ -56,12 +64,14 @@ export default function SwipeDeck({ cards, onSwipe, swipeRequest }: SwipeDeckPro
 function SwipeCard({
   card,
   index,
+  onSwipeStart,
   onSwipe,
   isTop,
   swipeRequest,
 }: {
   card: MovieCardData;
   index: number;
+  onSwipeStart?: (id: number, direction: "left" | "right") => void;
   onSwipe: (id: number, direction: "left" | "right") => void;
   isTop: boolean;
   swipeRequest?: { direction: "left" | "right"; nonce: number; cardId: number };
@@ -78,7 +88,8 @@ function SwipeCard({
   function exitCard(direction: "left" | "right") {
     if (exitingDirection) return;
     setExitingDirection(direction);
-    setTimeout(() => onSwipe(card.id, direction), 200);
+    onSwipeStart?.(card.id, direction);
+    setTimeout(() => onSwipe(card.id, direction), 180);
   }
 
   function handleDragEnd(_: unknown, info: PanInfo) {
@@ -143,13 +154,15 @@ function SwipeCard({
         />
         <div className="relative h-full w-full overflow-hidden rounded-[calc(2rem-1px)] bg-[var(--surface)]">
           {card.posterUrl ? (
-            <img
+            <Image
               src={card.posterUrl}
               alt={card.title}
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
+              fill
+              sizes="(max-width: 640px) 90vw, 430px"
+              priority={index === 0}
+              loading="eager"
+              className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
               draggable={false}
-              decoding="async"
-              loading={index === 0 ? "eager" : "lazy"}
             />
           ) : (
             <div className="absolute inset-0 bg-[var(--surface)] flex items-center justify-center">

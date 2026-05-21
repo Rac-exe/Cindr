@@ -13,28 +13,22 @@ import {
   getEffectivePreferences,
 } from "@/lib/supabase/core";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
-import type { PreferencePerson, PreferencePersonRole } from "@/types/user";
+import AppHeader from "@/components/layout/AppHeader";
+import type {
+  EraPreference,
+  PreferencePerson,
+  PreferencePersonRole,
+  RuntimePreference,
+} from "@/types/user";
 
 type Step = "languages" | "content_type" | "questions";
 type PreferenceView = "quiz" | "advanced";
-
-type OnboardingHistoryState = {
-  cindrOnboarding: true;
-  step: Step;
-  questionIndex: number;
-};
 
 type PersonSearchResult = {
   id: number;
   name: string;
   knownFor?: string;
 };
-
-function onboardingHash(step: Step, questionIndex: number): string {
-  return step === "questions"
-    ? `#questions-${questionIndex}`
-    : `#${step}`;
-}
 
 function OnboardingAtmosphere() {
   return <CinematicBackdrop density="balanced" />;
@@ -46,6 +40,7 @@ export default function OnboardingPage() {
       fallback={
         <div className="min-h-[100dvh] flex items-center justify-center relative overflow-hidden">
           <OnboardingAtmosphere />
+          <AppHeader />
           <div className="w-8 h-8 border-2 border-[var(--color-cindr)] border-t-transparent rounded-full animate-spin relative z-10" />
         </div>
       }
@@ -60,11 +55,19 @@ function OnboardingContent() {
   const searchParams = useSearchParams();
   const view: PreferenceView =
     searchParams.get("mode") === "advanced" ? "advanced" : "quiz";
+  const queryStep = searchParams.get("step") as Step | null;
+  const step: Step =
+    queryStep === "content_type" || queryStep === "questions"
+      ? queryStep
+      : "languages";
+  const queryIndex = Number(searchParams.get("q") ?? "0");
+  const currentQIndex =
+    step === "questions" && Number.isFinite(queryIndex)
+      ? Math.max(0, Math.round(queryIndex))
+      : 0;
 
-  const [step, setStep] = useState<Step>("languages");
   const [selectedLangs, setSelectedLangs] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [currentQIndex, setCurrentQIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
   const [yearFrom, setYearFrom] = useState("");
@@ -82,35 +85,16 @@ function OnboardingContent() {
 
   const setOnboardingLocation = useCallback(
     (nextStep: Step, nextQuestionIndex = 0, push = true) => {
-      setStep(nextStep);
-      setCurrentQIndex(nextQuestionIndex);
-
-      const state: OnboardingHistoryState = {
-        cindrOnboarding: true,
-        step: nextStep,
-        questionIndex: nextQuestionIndex,
-      };
-      if (typeof window !== "undefined") {
-        const method = push ? "pushState" : "replaceState";
-        window.history[method](state, "", onboardingHash(nextStep, nextQuestionIndex));
+      const params = new URLSearchParams({ mode: view, step: nextStep });
+      if (nextStep === "questions") {
+        params.set("q", String(nextQuestionIndex));
       }
+      const nextUrl = `/onboarding?${params.toString()}`;
+      if (push) router.push(nextUrl);
+      else router.replace(nextUrl);
     },
-    []
+    [router, view]
   );
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    function handlePopState(event: PopStateEvent) {
-      const state = event.state as Partial<OnboardingHistoryState> | null;
-      if (!state?.cindrOnboarding || !state.step) return;
-      setStep(state.step);
-      setCurrentQIndex(state.questionIndex ?? 0);
-    }
-
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -130,6 +114,19 @@ function OnboardingContent() {
           if (selectedValues.length > 0) {
             next[question.id] = selectedValues;
           }
+        }
+        if (preferences.era && preferences.era !== "any") {
+          next.movie_era = [preferences.era];
+        }
+        if (
+          preferences.runtimePreference &&
+          preferences.runtimePreference !== "any"
+        ) {
+          next.series_commitment = [
+            preferences.runtimePreference === "short"
+              ? "mini"
+              : preferences.runtimePreference,
+          ];
         }
         return next;
       });
@@ -249,15 +246,34 @@ function OnboardingContent() {
   function buildPrefs(moods: string[]) {
     const fromYear = normalizeYear(yearFrom);
     const toYear = normalizeYear(yearTo);
+    const era = (answers.movie_era?.[0] ?? "any") as EraPreference;
+    const runtimeRaw = answers.series_commitment?.[0] ?? "any";
+    const runtimePreference = (
+      runtimeRaw === "mini" ? "short" : runtimeRaw
+    ) as RuntimePreference;
+    const moodValues = moods.filter(
+      (value) =>
+        ![
+          "new",
+          "modern",
+          "classic",
+          "any",
+          "mini",
+          "medium",
+          "long",
+        ].includes(value)
+    );
 
     return {
       languages: selectedLangs,
       contentTypes: selectedTypes,
-      moods,
+      moods: moodValues,
       genres: selectedGenres,
       yearFrom: fromYear && toYear && fromYear > toYear ? toYear : fromYear,
       yearTo: fromYear && toYear && fromYear > toYear ? fromYear : toYear,
       people: selectedPeople,
+      era,
+      runtimePreference,
     };
   }
 
@@ -331,10 +347,11 @@ function OnboardingContent() {
 
   if (view === "advanced") {
     return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center px-3 py-3 sm:px-6 sm:py-12 relative overflow-hidden">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center px-3 pb-3 pt-20 sm:px-6 sm:pb-12 sm:pt-24 relative overflow-hidden">
         <OnboardingAtmosphere />
+        <AppHeader />
 
-        <div className="w-full max-w-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto relative z-10 rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:max-h-[92dvh] sm:rounded-[2rem] sm:p-7">
+        <div className="w-full max-w-md max-h-[calc(100dvh-6rem)] overflow-y-auto relative z-10 rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:max-h-[calc(100dvh-7rem)] sm:rounded-[2rem] sm:p-7">
           <button
             type="button"
             onClick={() => router.push("/discover")}
@@ -504,10 +521,11 @@ function OnboardingContent() {
   }
 
   return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center px-3 py-3 sm:px-6 sm:py-12 relative overflow-hidden">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center px-3 pb-3 pt-20 sm:px-6 sm:pb-12 sm:pt-24 relative overflow-hidden">
       <OnboardingAtmosphere />
+      <AppHeader />
 
-      <div className="w-full max-w-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto relative z-10 rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:max-h-[92dvh] sm:rounded-[2rem] sm:p-7">
+      <div className="w-full max-w-md max-h-[calc(100dvh-6rem)] overflow-y-auto relative z-10 rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:max-h-[calc(100dvh-7rem)] sm:rounded-[2rem] sm:p-7">
         {/* Main progress: 0/2, 1/2, 2/2 */}
         <div className="mb-5 sm:mb-8">
           <div className="flex items-center justify-between mb-1.5 sm:mb-2">

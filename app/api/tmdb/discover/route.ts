@@ -25,10 +25,10 @@ export async function GET(request: NextRequest) {
       .map(Number)
       .filter((id) => Number.isFinite(id)) ?? [];
     const contentTypes = searchParams.get("contentTypes")?.split(",").filter(Boolean) ?? [];
+    const mode = searchParams.get("mode") === "random" ? "random" : "taste";
     const era = searchParams.get("era") ?? "any";
     const length = searchParams.get("length") ?? "any";
     const page = parseInt(searchParams.get("page") ?? "1", 10);
-    const includeAdult = searchParams.get("includeAdult") === "true";
     const yearFrom = searchParams.get("yearFrom")
       ? Number(searchParams.get("yearFrom"))
       : null;
@@ -49,7 +49,6 @@ export async function GET(request: NextRequest) {
       era,
       length,
       page,
-      includeAdult,
       yearFrom: Number.isFinite(yearFrom) ? yearFrom : null,
       yearTo: Number.isFinite(yearTo) ? yearTo : null,
       actorIds,
@@ -123,8 +122,11 @@ export async function GET(request: NextRequest) {
 
     if (wantsDocs) {
       const docMovieParams = new URLSearchParams();
-      docMovieParams.set("sort_by", "popularity.desc");
-      docMovieParams.set("include_adult", includeAdult ? "true" : "false");
+      docMovieParams.set(
+        "sort_by",
+        mode === "random" ? "vote_count.desc" : "popularity.desc"
+      );
+      docMovieParams.set("include_adult", "false");
       docMovieParams.set("with_genres", "99");
       docMovieParams.set("page", String(page));
       docMovieParams.set("vote_count.gte", "20");
@@ -136,7 +138,7 @@ export async function GET(request: NextRequest) {
       }
       if (actorIds.length > 0) docMovieParams.set("with_cast", actorIds.join("|"));
       if (directorIds.length > 0) docMovieParams.set("with_crew", directorIds.join("|"));
-      if (languages.length > 0) {
+      if (mode === "taste" && languages.length > 0) {
         docMovieParams.set("with_original_language", languages.join("|"));
       }
 
@@ -183,7 +185,6 @@ export async function GET(request: NextRequest) {
               ...baseParams,
               isAnime: false,
               mediaType: "movie",
-              includePeople: false,
             })
           )
             .then((data) => {
@@ -201,7 +202,6 @@ export async function GET(request: NextRequest) {
               ...baseParams,
               isAnime: false,
               mediaType: "tv",
-              includePeople: false,
             })
           )
             .then((data) => {
@@ -220,7 +220,11 @@ export async function GET(request: NextRequest) {
       return true;
     });
 
-    deduped.sort((a, b) => b.popularity - a.popularity);
+    deduped.sort((a, b) =>
+      mode === "random"
+        ? Math.random() - 0.5
+        : b.popularity - a.popularity
+    );
 
     return NextResponse.json({
       page,

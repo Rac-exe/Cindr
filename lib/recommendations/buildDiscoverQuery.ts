@@ -8,7 +8,6 @@ export interface DiscoverParams {
   length: string;
   page?: number;
   isAnime?: boolean;
-  includeAdult?: boolean;
   mediaType?: "movie" | "tv";
   yearFrom?: number | null;
   yearTo?: number | null;
@@ -46,7 +45,7 @@ export function buildDiscoverQuery(params: DiscoverParams): URLSearchParams {
   const q = new URLSearchParams();
 
   q.set("sort_by", "popularity.desc");
-  q.set("include_adult", params.includeAdult ? "true" : "false");
+  q.set("include_adult", "false");
   q.set("include_video", "false");
   q.set("page", String(params.page ?? 1));
 
@@ -110,7 +109,7 @@ export function buildDiscoverQuery(params: DiscoverParams): URLSearchParams {
 export function buildRelaxedQuery(params: DiscoverParams): URLSearchParams {
   const q = new URLSearchParams();
   q.set("sort_by", "popularity.desc");
-  q.set("include_adult", params.includeAdult ? "true" : "false");
+  q.set("include_adult", "false");
   q.set("include_video", "false");
   q.set("page", String(params.page ?? 1));
 
@@ -129,6 +128,7 @@ export function buildRelaxedQuery(params: DiscoverParams): URLSearchParams {
   setYearRange(q, params);
 
   q.set("vote_count.gte", "5");
+  setPeopleFilters(q, params);
 
   return q;
 }
