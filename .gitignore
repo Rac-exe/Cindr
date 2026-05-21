@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+CINDR_V3_ROADMAP.md
 
 # debug
 npm-debug.log*
