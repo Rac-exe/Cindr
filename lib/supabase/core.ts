@@ -5,10 +5,14 @@ import type {
   DbUserPreferences,
   FeedbackCategory,
   FeedbackReport,
+  ProfileDashboardData,
   SavedMovie,
   SavedMovieStatus,
   UserPreferences,
 } from "@/types/user";
+
+const ERA_VALUES = ["new", "modern", "classic"] as const;
+const RUNTIME_VALUES = ["short", "medium", "long", "mini"] as const;
 
 // ── Auth helpers ────────────────────────────────────────────────────────
 
@@ -121,9 +125,6 @@ export async function updateProfileDateOfBirth(
     .select("*")
     .single();
 
-  const { saveGuestState } = await import("@/lib/guest/storage");
-  saveGuestState({ isAdult });
-
   return (data as Profile) ?? null;
 }
 
@@ -154,12 +155,11 @@ export async function submitFeedbackReport(input: {
   userAgent?: string | null;
 }): Promise<FeedbackReport | null> {
   const userId = await getCurrentUserId();
-  if (!userId) throw new Error("You must be signed in to submit feedback.");
 
   const { data, error } = await supabase
     .from("feedback_reports")
     .insert({
-      user_id: userId,
+      user_id: userId ?? null,
       category: input.category,
       message: input.message.trim(),
       page_path: input.pagePath ?? null,
@@ -199,15 +199,37 @@ export async function upsertPreferences(
   if (prefs.yearFrom !== undefined) row.year_from = prefs.yearFrom;
   if (prefs.yearTo !== undefined) row.year_to = prefs.yearTo;
   if (prefs.people) row.people = prefs.people;
+  if (prefs.discoverMode) row.discover_mode = prefs.discoverMode;
+  if (prefs.era) row.era = prefs.era;
+  if (prefs.runtimePreference) row.runtime_preference = prefs.runtimePreference;
   if (prefs.onboardingComplete !== undefined)
     row.onboarding_complete = prefs.onboardingComplete;
 
-  await supabase.from("user_preferences").upsert(row, { onConflict: "user_id" });
+  const { error } = await supabase
+    .from("user_preferences")
+    .upsert(row, { onConflict: "user_id" });
+
+  if (!error) return;
+
+  const legacyRow = { ...row };
+  delete legacyRow.discover_mode;
+  delete legacyRow.era;
+  delete legacyRow.runtime_preference;
+  const hasOnlyNewPreferenceColumnsMissing =
+    error.code === "PGRST204" || error.message.includes("schema cache");
+
+  if (hasOnlyNewPreferenceColumnsMissing) {
+    const { error: legacyError } = await supabase
+      .from("user_preferences")
+      .upsert(legacyRow, { onConflict: "user_id" });
+    if (!legacyError) return;
+  }
+
+  throw error;
 }
 
 /**
- * After login/signup, push guest localStorage preferences into Supabase
- * and mirror Supabase profile data (is_adult) back into guest state.
+ * After login/signup, push guest localStorage preferences into Supabase.
  */
 export async function syncGuestToAccount(): Promise<void> {
   const userId = await getCurrentUserId();
@@ -222,11 +244,7 @@ export async function syncGuestToAccount(): Promise<void> {
     });
   }
 
-  const profile = await ensureProfileFromAuth();
-  if (profile?.is_adult && !guest.isAdult) {
-    const { saveGuestState } = await import("@/lib/guest/storage");
-    saveGuestState({ isAdult: true });
-  }
+  await ensureProfileFromAuth();
 }
 
 /**
@@ -235,37 +253,106 @@ export async function syncGuestToAccount(): Promise<void> {
  */
 export async function getEffectivePreferences(): Promise<{
   preferences: UserPreferences;
-  isAdult: boolean;
   onboardingComplete: boolean;
 }> {
+  const guest = getGuestState();
   const userId = await getCurrentUserId();
   if (userId) {
-    const [dbPrefs, profile] = await Promise.all([
-      getDbPreferences(),
-      getProfile(),
-    ]);
+    const dbPrefs = await getDbPreferences();
     if (dbPrefs) {
+      const rawMoods = dbPrefs.moods ?? [];
+      const legacyEra = rawMoods.find((mood) =>
+        ERA_VALUES.includes(mood as (typeof ERA_VALUES)[number])
+      );
+      const legacyRuntime = rawMoods.find((mood) =>
+        RUNTIME_VALUES.includes(mood as (typeof RUNTIME_VALUES)[number])
+      );
       return {
         preferences: {
           languages: dbPrefs.languages,
           genres: dbPrefs.genres,
-          moods: dbPrefs.moods,
+          moods: rawMoods.filter(
+            (mood) =>
+              !ERA_VALUES.includes(mood as (typeof ERA_VALUES)[number]) &&
+              !RUNTIME_VALUES.includes(mood as (typeof RUNTIME_VALUES)[number])
+          ),
           contentTypes: dbPrefs.content_types,
           yearFrom: dbPrefs.year_from,
           yearTo: dbPrefs.year_to,
           people: dbPrefs.people ?? [],
+          discoverMode:
+            dbPrefs.discover_mode ?? guest.preferences.discoverMode ?? "taste",
+          era: dbPrefs.era ?? guest.preferences.era ?? legacyEra ?? "any",
+          runtimePreference:
+            dbPrefs.runtime_preference ??
+            guest.preferences.runtimePreference ??
+            (legacyRuntime === "mini" ? "short" : legacyRuntime) ??
+            "any",
         },
-        isAdult: profile?.is_adult ?? false,
         onboardingComplete: dbPrefs.onboarding_complete,
       };
     }
   }
 
-  const guest = getGuestState();
   return {
     preferences: guest.preferences,
-    isAdult: guest.isAdult,
     onboardingComplete: guest.onboardingComplete,
+  };
+}
+
+export async function getProfileDashboardData(): Promise<ProfileDashboardData | null> {
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const [profile, preferences, savedMovies, feedbackReports] = await Promise.all([
+    ensureProfileFromAuth(),
+    getDbPreferences(),
+    supabase.from("saved_movies").select("*").eq("user_id", userId),
+    supabase.from("feedback_reports").select("*").eq("user_id", userId),
+  ]);
+
+  const movies = (savedMovies.data as SavedMovie[] | null) ?? [];
+  const reports = (feedbackReports.data as FeedbackReport[] | null) ?? [];
+  const displayName =
+    profile?.display_name ??
+    (user?.user_metadata?.display_name as string | undefined) ??
+    user?.email?.split("@")[0] ??
+    "User";
+
+  return {
+    identity: {
+      displayName,
+      email: user?.email ?? null,
+      avatarUrl: profile?.avatar_url ?? null,
+      dateOfBirth:
+        profile?.date_of_birth ??
+        (user?.user_metadata?.date_of_birth as string | undefined) ??
+        null,
+    },
+    taste: {
+      languages: preferences?.languages ?? [],
+      contentTypes: preferences?.content_types ?? [],
+      moods: preferences?.moods ?? [],
+      genres: preferences?.genres ?? [],
+      yearFrom: preferences?.year_from ?? null,
+      yearTo: preferences?.year_to ?? null,
+      peopleCount: preferences?.people?.length ?? 0,
+      discoverMode: preferences?.discover_mode ?? "taste",
+    },
+    library: {
+      liked: movies.filter((movie) => movie.liked).length,
+      watchlisted: movies.filter((movie) => movie.watchlisted).length,
+      favourite: movies.filter((movie) => movie.favourite).length,
+      watched: movies.filter((movie) => movie.watched).length,
+      rated: movies.filter((movie) => movie.rating !== null).length,
+    },
+    support: {
+      feedbackReports: reports.length,
+      openReports: reports.filter((report) => report.status === "open").length,
+    },
   };
 }
 

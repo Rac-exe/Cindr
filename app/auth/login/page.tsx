@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { syncGuestToAccount, getDbPreferences } from "@/lib/supabase/core";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
+import AppHeader from "@/components/layout/AppHeader";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +14,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (mounted && data.user) router.replace("/discover");
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,8 +52,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 pt-20 relative overflow-hidden">
       <CinematicBackdrop density="balanced" />
+      <AppHeader />
       <div className="w-full max-w-sm relative z-10 rounded-[2rem] border border-white/10 bg-[#111015]/80 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
         <Link href="/" className="block text-center mb-8">
           <span className="text-2xl font-semibold tracking-tight">

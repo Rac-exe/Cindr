@@ -122,7 +122,7 @@ export default function CinematicBackdrop({
   const stripFloat = "animate-[cindr-film-float_18s_ease-in-out_infinite] motion-reduce:animate-none";
 
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden text-[#F0642F]" aria-hidden="true">
+    <div className="pointer-events-none fixed inset-0 overflow-hidden text-[#F0642F]" aria-hidden="true">
       <FilmReel className={`${isSubtle ? "opacity-50" : "opacity-85"} ${neonGlow} ${reelMotionA} absolute -right-8 -top-8 h-44 w-44 sm:h-52 sm:w-52`} />
       <FilmReel className={`${isSubtle ? "opacity-42" : "opacity-78"} ${neonGlow} ${reelMotionB} absolute -bottom-12 -left-10 h-40 w-40`} />
       <FilmReel className={`${isSubtle ? "opacity-32" : "opacity-58"} ${neonGlow} ${reelMotionB} absolute right-[8%] top-[58%] hidden h-24 w-24 md:block`} />

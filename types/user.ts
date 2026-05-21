@@ -1,4 +1,7 @@
 export type PreferencePersonRole = "actor" | "director";
+export type DiscoverMode = "taste" | "random";
+export type EraPreference = "new" | "modern" | "classic" | "any";
+export type RuntimePreference = "short" | "medium" | "long" | "any";
 
 export interface PreferencePerson {
   id: number;
@@ -14,13 +17,15 @@ export interface UserPreferences {
   yearFrom: number | null;
   yearTo: number | null;
   people: PreferencePerson[];
+  discoverMode: DiscoverMode;
+  era: EraPreference;
+  runtimePreference: RuntimePreference;
 }
 
 export interface GuestState {
   preferences: UserPreferences;
   onboardingComplete: boolean;
   swipedIds: number[];
-  isAdult: boolean;
 }
 
 // ── Supabase row types ──────────────────────────────────────────────────
@@ -40,7 +45,7 @@ export type FeedbackCategory = "feedback" | "issue";
 
 export interface FeedbackReport {
   id: string;
-  user_id: string;
+  user_id: string | null;
   category: FeedbackCategory;
   message: string;
   page_path: string | null;
@@ -58,6 +63,9 @@ export interface DbUserPreferences {
   year_from: number | null;
   year_to: number | null;
   people: PreferencePerson[];
+  discover_mode: DiscoverMode;
+  era: EraPreference;
+  runtime_preference: RuntimePreference;
   onboarding_complete: boolean;
   created_at: string;
   updated_at: string;
@@ -80,4 +88,34 @@ export interface SavedMovie {
   rating: number | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProfileDashboardData {
+  identity: {
+    displayName: string;
+    email: string | null;
+    avatarUrl: string | null;
+    dateOfBirth: string | null;
+  };
+  taste: {
+    languages: string[];
+    contentTypes: string[];
+    moods: string[];
+    genres: number[];
+    yearFrom: number | null;
+    yearTo: number | null;
+    peopleCount: number;
+    discoverMode: DiscoverMode;
+  };
+  library: {
+    liked: number;
+    watchlisted: number;
+    favourite: number;
+    watched: number;
+    rated: number;
+  };
+  support: {
+    feedbackReports: number;
+    openReports: number;
+  };
 }

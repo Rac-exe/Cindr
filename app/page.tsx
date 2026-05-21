@@ -3,7 +3,7 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChatCircleText, SignOut, UserCircle } from "@phosphor-icons/react";
+import { ChatCircleText, Info, SignOut, UserCircle } from "@phosphor-icons/react";
 import { clearGuestState } from "@/lib/guest/storage";
 import { supabase } from "@/lib/supabase/client";
 import { getProfile, submitFeedbackReport } from "@/lib/supabase/core";
@@ -221,13 +221,13 @@ export default function LandingPage() {
       {/* Cinematic decorations spread across the whole page */}
       <div className="pointer-events-none absolute inset-0 text-[#F0642F] drop-shadow-[0_0_4px_rgba(216,90,48,0.8)] drop-shadow-[0_0_12px_rgba(216,90,48,0.45)]">
         {/* Film reels */}
-        <FilmReel className="absolute -top-10 -right-16 w-44 h-44 opacity-80 sm:-top-6 sm:-right-6 sm:w-52 sm:h-52 sm:opacity-85" />
-        <FilmReel className="absolute -bottom-10 -left-10 w-40 h-40 opacity-75" />
-        <FilmReel className="absolute top-[55%] right-[8%] w-24 h-24 opacity-60 hidden md:block" />
-        <FilmReel className="absolute top-[20%] left-[5%] w-20 h-20 opacity-55 hidden md:block" />
-        <FilmReel className="absolute top-[80%] left-[40%] w-16 h-16 opacity-40 hidden md:block" />
-        <FilmReel className="absolute top-[10%] right-[30%] w-14 h-14 opacity-35 hidden lg:block" />
-        <FilmReel className="absolute bottom-[5%] right-[45%] w-18 h-18 opacity-48 hidden md:block" />
+        <FilmReel className="absolute -top-10 -right-16 h-44 w-44 origin-center animate-[spin_34s_linear_infinite] opacity-80 sm:-top-6 sm:-right-6 sm:h-52 sm:w-52 sm:opacity-85" />
+        <FilmReel className="absolute -bottom-10 -left-10 h-40 w-40 origin-center animate-[spin_38s_linear_infinite_reverse] opacity-75" />
+        <FilmReel className="absolute top-[55%] right-[8%] hidden h-24 w-24 origin-center animate-[spin_30s_linear_infinite] opacity-60 md:block" />
+        <FilmReel className="absolute top-[20%] left-[5%] hidden h-20 w-20 origin-center animate-[spin_32s_linear_infinite_reverse] opacity-55 md:block" />
+        <FilmReel className="absolute top-[80%] left-[40%] hidden h-16 w-16 origin-center animate-[spin_28s_linear_infinite] opacity-40 md:block" />
+        <FilmReel className="absolute top-[10%] right-[30%] hidden h-14 w-14 origin-center animate-[spin_26s_linear_infinite_reverse] opacity-35 lg:block" />
+        <FilmReel className="absolute bottom-[5%] right-[45%] hidden h-18 w-18 origin-center animate-[spin_36s_linear_infinite] opacity-48 md:block" />
 
         {/* Film strips */}
         <FilmStrip className="absolute left-6 top-8 w-7 opacity-80 hidden lg:block" />
@@ -298,6 +298,14 @@ export default function LandingPage() {
                   )}
                   Profile
                 </button>
+                <Link
+                  href="/about"
+                  onClick={() => setProfileMenuOpen(false)}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <Info size={18} />
+                  About Cindr
+                </Link>
                 <button
                   type="button"
                   onClick={() => openFeedbackModal("feedback")}
@@ -319,6 +327,12 @@ export default function LandingPage() {
           </div>
         ) : (
           <div className="flex items-center gap-3">
+            <Link
+              href="/about"
+              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/75 shadow-[0_0_18px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-colors hover:border-white/20 hover:bg-white/[0.08] hover:text-white sm:px-3.5"
+            >
+              About
+            </Link>
             <Link
               href="/auth/login"
               className="rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-2 text-sm font-medium text-white/90 shadow-[0_0_18px_rgba(0,0,0,0.25)] backdrop-blur-sm transition-colors hover:border-white/20 hover:bg-white/[0.1] hover:text-white"

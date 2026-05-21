@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { syncGuestToAccount } from "@/lib/supabase/core";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
+import AppHeader from "@/components/layout/AppHeader";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -16,6 +17,16 @@ export default function SignupPage() {
   const [dob, setDob] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (mounted && data.user) router.replace("/discover");
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [router]);
 
   function getAge(dateString: string): number {
     const birth = new Date(dateString);
@@ -84,8 +95,9 @@ export default function SignupPage() {
     "w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border-color)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--color-cindr)] transition-colors";
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 pb-10 pt-24 relative overflow-hidden">
       <CinematicBackdrop density="balanced" />
+      <AppHeader />
       <div className="w-full max-w-sm relative z-10 rounded-[2rem] border border-white/10 bg-[#111015]/80 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
         <Link href="/" className="block text-center mb-8">
           <span className="text-2xl font-semibold tracking-tight">

@@ -1,40 +1,23 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { type FormEvent, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { clearGuestState } from "@/lib/guest/storage";
 import {
   ensureProfileFromAuth,
-  getDbPreferences,
+  getProfileDashboardData,
+  submitFeedbackReport,
   updateProfileAvatar,
-  updateProfileDateOfBirth,
 } from "@/lib/supabase/core";
 import { buildCloudinaryAvatarUrl } from "@/lib/cloudinary/avatar";
-import type { Profile, DbUserPreferences } from "@/types/user";
+import type { FeedbackCategory, Profile, ProfileDashboardData } from "@/types/user";
 import AppHeader from "@/components/layout/AppHeader";
 import MobileNav from "@/components/layout/MobileNav";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
-import { Camera, Trash } from "@phosphor-icons/react";
-
-function calculateIsAdult(dateString: string | null | undefined): boolean {
-  if (!dateString) return false;
-  const birth = new Date(dateString);
-  if (Number.isNaN(birth.getTime())) return false;
-
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDelta = today.getMonth() - birth.getMonth();
-  if (
-    monthDelta < 0 ||
-    (monthDelta === 0 && today.getDate() < birth.getDate())
-  ) {
-    age--;
-  }
-  return age >= 18;
-}
+import { Camera, ChatCircleText, Trash } from "@phosphor-icons/react";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -42,15 +25,17 @@ export default function ProfilePage() {
   const previewObjectUrlRef = useRef<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [prefs, setPrefs] = useState<DbUserPreferences | null>(null);
+  const [dashboard, setDashboard] = useState<ProfileDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [dobDraft, setDobDraft] = useState("");
-  const [dobSaving, setDobSaving] = useState(false);
-  const [dobMessage, setDobMessage] = useState("");
-  const [isEditingDob, setIsEditingDob] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState("");
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState("");
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackCategory, setFeedbackCategory] =
+    useState<FeedbackCategory>("feedback");
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackStatus, setFeedbackStatus] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -60,17 +45,12 @@ export default function ProfilePage() {
       setUser(currentUser);
 
       if (currentUser) {
-        const [p, pr] = await Promise.all([
+        const [p, dashboardData] = await Promise.all([
           ensureProfileFromAuth(),
-          getDbPreferences(),
+          getProfileDashboardData(),
         ]);
         setProfile(p);
-        setPrefs(pr);
-        setDobDraft(
-          p?.date_of_birth ??
-            (currentUser.user_metadata?.date_of_birth as string | undefined) ??
-            ""
-        );
+        setDashboard(dashboardData);
       }
       setLoading(false);
     })();
@@ -88,42 +68,6 @@ export default function ProfilePage() {
     await supabase.auth.signOut();
     clearGuestState();
     router.push("/");
-  }
-
-  async function handleSaveDob() {
-    if (!dobDraft) {
-      setDobMessage("Pick your date of birth first.");
-      return;
-    }
-
-    setDobSaving(true);
-    setDobMessage("");
-    try {
-      const updatedProfile = await updateProfileDateOfBirth(dobDraft);
-      if (updatedProfile) {
-        setProfile(updatedProfile);
-        setUser((prev) =>
-          prev
-            ? ({
-                ...prev,
-                user_metadata: {
-                  ...prev.user_metadata,
-                  date_of_birth: dobDraft,
-                  is_adult: updatedProfile.is_adult,
-                },
-              } as User)
-            : prev
-        );
-        setDobMessage("Date of birth saved.");
-        setIsEditingDob(false);
-      } else {
-        setDobMessage("Could not save date of birth.");
-      }
-    } catch {
-      setDobMessage("Could not save date of birth. Please try again.");
-    } finally {
-      setDobSaving(false);
-    }
   }
 
   function setLocalAvatarPreview(file: File) {
@@ -276,6 +220,50 @@ export default function ProfilePage() {
     }
   }
 
+  function openFeedbackModal(category: FeedbackCategory = "feedback") {
+    setFeedbackCategory(category);
+    setFeedbackStatus("");
+    setFeedbackOpen(true);
+  }
+
+  async function handleFeedbackSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const message = feedbackMessage.trim();
+    if (!message) {
+      setFeedbackStatus("Please write something before submitting.");
+      return;
+    }
+
+    setFeedbackSubmitting(true);
+    setFeedbackStatus("");
+    try {
+      await submitFeedbackReport({
+        category: feedbackCategory,
+        message,
+        pagePath: typeof window === "undefined" ? null : window.location.pathname,
+        userAgent: typeof navigator === "undefined" ? null : navigator.userAgent,
+      });
+      setFeedbackMessage("");
+      setFeedbackStatus("Thanks, your report has been saved.");
+      setDashboard((current) =>
+        current
+          ? {
+              ...current,
+              support: {
+                ...current.support,
+                feedbackReports: current.support.feedbackReports + 1,
+                openReports: current.support.openReports + 1,
+              },
+            }
+          : current
+      );
+    } catch {
+      setFeedbackStatus("Could not submit this right now. Please try again.");
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
@@ -342,21 +330,6 @@ export default function ProfilePage() {
     profile?.date_of_birth ??
     (user.user_metadata?.date_of_birth as string | undefined) ??
     null;
-  const isAdult =
-    Boolean(profile?.is_adult) ||
-    calculateIsAdult(dateOfBirth) ||
-    user.user_metadata?.is_adult === true ||
-    user.user_metadata?.is_adult === "true";
-  const preferenceSummary = prefs
-    ? [
-        prefs.languages.length > 0
-          ? prefs.languages.map((l) => l.toUpperCase()).join(", ")
-          : null,
-        prefs.content_types.length > 0
-          ? prefs.content_types.join(", ")
-          : null,
-      ].filter(Boolean).join(" • ")
-    : "Not set";
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden">
@@ -436,93 +409,54 @@ export default function ProfilePage() {
         </div>
 
         <div className="flex flex-col gap-2 mb-6">
-          <div className="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/[0.04]">
-            <span className="text-sm text-[var(--muted)]">Age gate</span>
-            <span className={`text-sm font-medium ${isAdult ? "text-[var(--color-cindr)]" : "text-[var(--foreground)]"}`}>
-              {isAdult ? "18+" : "Under 18"}
-            </span>
-          </div>
           <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-[var(--muted)]">Date of birth</span>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-medium ${dateOfBirth ? "text-white" : "text-yellow-400"}`}>
-                  {dateOfBirth ?? "Missing"}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDobDraft(dateOfBirth ?? "");
-                    setDobMessage("");
-                    setIsEditingDob((current) => !current);
-                  }}
-                  className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                >
-                  {dateOfBirth ? "Edit" : "Add"}
-                </button>
-              </div>
-            </div>
-            {isEditingDob && (
-              <div className="mt-3 grid grid-cols-[1fr_auto_auto] gap-2">
-                <input
-                  type="date"
-                  value={dobDraft}
-                  onChange={(e) => setDobDraft(e.target.value)}
-                  max={new Date().toISOString().split("T")[0]}
-                  className="min-w-0 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--color-cindr)] focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={handleSaveDob}
-                  disabled={dobSaving}
-                  className="rounded-xl bg-[var(--color-cindr)] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-cindr-hover)] disabled:opacity-50"
-                >
-                  {dobSaving ? "Saving" : "Save"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDobDraft(dateOfBirth ?? "");
-                    setDobMessage("");
-                    setIsEditingDob(false);
-                  }}
-                  className="rounded-xl border border-white/10 px-3 py-2 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-            {dobMessage && (
-              <p className="mt-2 text-xs text-[var(--muted)]">{dobMessage}</p>
-            )}
-          </div>
-          {!dateOfBirth && (
-            <p className="px-1 text-xs leading-relaxed text-yellow-400/90">
-              Date of birth is missing, so Cindr cannot fully verify age-gated content.
-            </p>
-          )}
-          <div className="p-4 rounded-xl border border-white/10 bg-white/[0.04]">
-            <div className="mb-1 flex items-center justify-between">
-              <span className="text-sm text-[var(--muted)]">Preferences</span>
-              <span className={`text-xs font-medium ${prefs?.onboarding_complete ? "text-green-400" : "text-yellow-400"}`}>
-                {prefs?.onboarding_complete ? "Ready" : "Incomplete"}
+              <span className={`text-sm font-medium ${dateOfBirth ? "text-white" : "text-yellow-400"}`}>
+                {dateOfBirth ?? "Missing"}
               </span>
             </div>
-            <p className="text-sm font-medium capitalize text-white/90">
-              {preferenceSummary || "Not set"}
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+            <span className="text-sm text-[var(--muted)]">Library</span>
+            <div className="mt-3 grid grid-cols-5 gap-2 text-center">
+              {[
+                ["Liked", dashboard?.library.liked ?? 0],
+                ["List", dashboard?.library.watchlisted ?? 0],
+                ["Fav", dashboard?.library.favourite ?? 0],
+                ["Seen", dashboard?.library.watched ?? 0],
+                ["Rated", dashboard?.library.rated ?? 0],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-lg bg-black/20 px-1.5 py-2">
+                  <p className="text-sm font-semibold text-white/90">{value}</p>
+                  <p className="mt-0.5 text-[10px] text-white/42">{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[var(--muted)]">Support reports</span>
+              <span className="text-sm font-semibold text-white/90">
+                {dashboard?.support.feedbackReports ?? 0}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-white/45">
+              {dashboard?.support.openReports ?? 0} open report
+              {(dashboard?.support.openReports ?? 0) === 1 ? "" : "s"}
             </p>
+            <button
+              type="button"
+              onClick={() => openFeedbackModal("feedback")}
+              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.07] hover:text-white"
+            >
+              <ChatCircleText size={17} />
+              Feedback / report issue
+            </button>
           </div>
         </div>
 
         <div className="flex flex-col gap-2">
-          <Link
-            href="/onboarding?mode=quiz"
-            className="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.07] transition-colors"
-          >
-            <span className="text-sm font-medium">Update preferences</span>
-            <span className="text-[var(--muted)]">&rarr;</span>
-          </Link>
-
           <button
             onClick={handleSignOut}
             className="w-full p-4 rounded-xl border border-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/5 transition-colors text-left"
@@ -532,6 +466,87 @@ export default function ProfilePage() {
         </div>
         </div>
       </main>
+      {feedbackOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4 py-8 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#111015] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--color-cindr)]">
+                  Help improve Cindr
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">
+                  Send feedback
+                </h2>
+                <p className="mt-1 text-sm text-white/55">
+                  Tell us what felt broken, confusing, or what you want next.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFeedbackOpen(false)}
+                className="rounded-full border border-white/10 px-3 py-1.5 text-sm text-white/65 transition-colors hover:bg-white/[0.06] hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+
+            <form onSubmit={handleFeedbackSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.04] p-1">
+                {(["feedback", "issue"] as FeedbackCategory[]).map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => setFeedbackCategory(category)}
+                    className={`rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                      feedbackCategory === category
+                        ? "bg-[var(--color-cindr)] text-white"
+                        : "text-white/65 hover:bg-white/[0.06] hover:text-white"
+                    }`}
+                  >
+                    {category === "feedback" ? "Feedback" : "Report issue"}
+                  </button>
+                ))}
+              </div>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-white/75">
+                  What happened?
+                </span>
+                <textarea
+                  value={feedbackMessage}
+                  onChange={(event) => setFeedbackMessage(event.target.value)}
+                  rows={5}
+                  placeholder="Example: The trailer opened but would not play on mobile..."
+                  className="w-full resize-none rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/30 focus:border-[var(--color-cindr)]/60"
+                />
+              </label>
+
+              {feedbackStatus && (
+                <p className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/70">
+                  {feedbackStatus}
+                </p>
+              )}
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setFeedbackOpen(false)}
+                  className="rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={feedbackSubmitting}
+                  className="rounded-full bg-[var(--color-cindr)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-cindr-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {feedbackSubmitting ? "Sending..." : "Submit"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       <MobileNav />
     </div>
   );
