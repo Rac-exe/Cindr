@@ -624,3 +624,15 @@ export async function getSavedMovies(): Promise<SavedMovie[]> {
     .order("created_at", { ascending: false });
   return (data as SavedMovie[]) ?? [];
 }
+
+/** Lightweight — only fetches liked tmdb_ids to exclude from discover feed */
+export async function getLikedTmdbIds(): Promise<number[]> {
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+  const { data } = await supabase
+    .from("saved_movies")
+    .select("tmdb_id")
+    .eq("user_id", userId)
+    .eq("liked", true);
+  return (data ?? []).map((r: { tmdb_id: number }) => r.tmdb_id);
+}

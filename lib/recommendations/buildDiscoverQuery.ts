@@ -19,6 +19,12 @@ export interface DiscoverParams {
   actorIds?: number[];
   directorIds?: number[];
   includePeople?: boolean;
+  /** Genre IDs learned from swipe history (appended with OR logic) */
+  learnedGenreIds?: number[];
+  /** Genre IDs to exclude based on negative swipe history */
+  excludeGenreIds?: number[];
+  /** Minimum vote_average from taste profile */
+  voteFloor?: number;
 }
 
 function dateParamPrefix(params: DiscoverParams): string {
@@ -86,6 +92,11 @@ function setGenreFilters(q: URLSearchParams, params: DiscoverParams): void {
   const genreIds = new Set<number>(explicitGenresForMedia(params));
   moodGenreIds.forEach((id) => genreIds.add(id));
 
+  // Blend in learned genres when no explicit user genres are set
+  if ((params.learnedGenreIds?.length ?? 0) > 0 && genreIds.size === 0 && moodGenreIds.length === 0) {
+    params.learnedGenreIds!.forEach((id) => genreIds.add(id));
+  }
+
   if (params.isAnime) {
     const animeSubGenres = Array.from(genreIds).filter((id) => id !== 16);
     q.set(
@@ -97,6 +108,11 @@ function setGenreFilters(q: URLSearchParams, params: DiscoverParams): void {
 
   if (genreIds.size > 0) {
     q.set("with_genres", Array.from(genreIds).join("|"));
+  }
+
+  // Exclude strongly disliked genres
+  if ((params.excludeGenreIds?.length ?? 0) > 0) {
+    q.set("without_genres", params.excludeGenreIds!.join(","));
   }
 }
 
@@ -158,6 +174,9 @@ export function buildDiscoverQuery(params: DiscoverParams): URLSearchParams {
   }
 
   q.set("vote_count.gte", "20");
+  if (params.voteFloor && params.voteFloor > 4.0) {
+    q.set("vote_average.gte", params.voteFloor.toFixed(1));
+  }
   setPeopleFilters(q, params);
 
   return q;

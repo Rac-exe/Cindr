@@ -43,6 +43,9 @@ export async function GET(request: NextRequest) {
     const genres = parsePositiveIds(searchParams.get("genres"), ",");
     const actorIds = parsePositiveIds(searchParams.get("actors"), "|");
     const directorIds = parsePositiveIds(searchParams.get("directors"), "|");
+    const learnedGenreIds = parsePositiveIds(searchParams.get("learnedGenres"), ",");
+    const excludeGenreIds = parsePositiveIds(searchParams.get("excludeGenres"), ",");
+    const voteFloor = parseFloat(searchParams.get("voteFloor") ?? "0") || undefined;
     const contentTypes = searchParams.get("contentTypes")?.split(",").filter(Boolean) ?? [];
     const mode = searchParams.get("mode") === "random" ? "random" : "taste";
     const era = searchParams.get("era") ?? "any";
@@ -79,6 +82,9 @@ export async function GET(request: NextRequest) {
       yearTo,
       actorIds,
       directorIds,
+      learnedGenreIds: learnedGenreIds.length > 0 ? learnedGenreIds : undefined,
+      excludeGenreIds: excludeGenreIds.length > 0 ? excludeGenreIds : undefined,
+      voteFloor,
     };
 
     const fetches: Promise<void>[] = [];
