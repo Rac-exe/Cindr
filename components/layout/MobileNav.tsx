@@ -84,7 +84,7 @@ export default function MobileNav() {
 
   return (
     <>
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-[var(--background)]/90 backdrop-blur-lg border-t border-[var(--border-color)] lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-[var(--background)]/90 py-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] backdrop-blur-lg border-t border-[var(--border-color)] lg:hidden">
       {NAV_ITEMS.map((item) => {
         const active = pathname.startsWith(item.href);
         const Icon = item.icon as Icon;
@@ -122,7 +122,7 @@ export default function MobileNav() {
               <button
                 type="button"
                 onClick={() => setPrefsOpen((current) => !current)}
-                className={`flex min-w-16 flex-col items-center gap-1 rounded-2xl px-2.5 py-1.5 transition-all ${
+                className={`flex min-w-16 flex-col items-center gap-0.5 rounded-2xl px-2 py-1.5 transition-all ${
                   active
                     ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)] shadow-[0_0_24px_rgba(216,90,48,0.18)]"
                     : "text-[var(--muted)] hover:text-white"
@@ -131,11 +131,11 @@ export default function MobileNav() {
                 aria-haspopup="menu"
               >
                 <Icon
-                  size={22}
+                  size={20}
                   weight={active ? "fill" : "regular"}
                   className={active ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]" : ""}
                 />
-                <span className="text-[10px] font-medium tracking-wide">
+                <span className="text-[9px] font-medium tracking-wide">
                   {item.label}
                 </span>
               </button>
@@ -171,7 +171,7 @@ export default function MobileNav() {
                     <ChatCircleText size={18} />
                     Feedback / report issue
                   </button>
-                  {isSignedIn ? (
+                  {isSignedIn && (
                     <button
                       type="button"
                       onClick={handleSignOut}
@@ -180,30 +180,13 @@ export default function MobileNav() {
                       <SignOut size={18} />
                       Sign out
                     </button>
-                  ) : (
-                    <div className="mt-1 grid grid-cols-2 gap-2 border-t border-white/10 pt-2">
-                      <Link
-                        href="/auth/login"
-                        onClick={() => setProfileOpen(false)}
-                        className="rounded-xl border border-white/10 px-3 py-2.5 text-center text-sm font-medium text-white/75"
-                      >
-                        Log in
-                      </Link>
-                      <Link
-                        href="/auth/signup"
-                        onClick={() => setProfileOpen(false)}
-                        className="rounded-xl bg-[var(--color-cindr)] px-3 py-2.5 text-center text-sm font-semibold text-white"
-                      >
-                        Sign up
-                      </Link>
-                    </div>
                   )}
                 </div>
               )}
               <button
                 type="button"
                 onClick={() => setProfileOpen((current) => !current)}
-                className={`flex min-w-16 flex-col items-center gap-1 rounded-2xl px-2.5 py-1.5 transition-all ${
+                className={`flex min-w-16 flex-col items-center gap-0.5 rounded-2xl px-2 py-1.5 transition-all ${
                   active
                     ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)] shadow-[0_0_24px_rgba(216,90,48,0.18)]"
                     : "text-[var(--muted)] hover:text-white"
@@ -212,11 +195,11 @@ export default function MobileNav() {
                 aria-haspopup="menu"
               >
                 <Icon
-                  size={22}
+                  size={20}
                   weight={active ? "fill" : "regular"}
                   className={active ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]" : ""}
                 />
-                <span className="text-[10px] font-medium tracking-wide">
+                <span className="text-[9px] font-medium tracking-wide">
                   {item.label}
                 </span>
               </button>
@@ -227,18 +210,18 @@ export default function MobileNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex min-w-16 flex-col items-center gap-1 rounded-2xl px-2.5 py-1.5 transition-all ${
+            className={`flex min-w-16 flex-col items-center gap-0.5 rounded-2xl px-2 py-1.5 transition-all ${
               active
                 ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)] shadow-[0_0_24px_rgba(216,90,48,0.18)]"
                 : "text-[var(--muted)] hover:text-white"
             }`}
           >
             <Icon
-              size={22}
+              size={20}
               weight={active ? "fill" : "regular"}
               className={active ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]" : ""}
             />
-            <span className="text-[10px] font-medium tracking-wide">
+            <span className="text-[9px] font-medium tracking-wide">
               {item.label}
             </span>
           </Link>

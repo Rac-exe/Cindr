@@ -131,7 +131,7 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0a0a0f] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-[#0a0a0f] px-4 py-8">
       {/* Radial ambient */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full bg-[radial-gradient(circle,rgba(216,90,48,0.08)_0%,transparent_70%)]" />
@@ -154,27 +154,27 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
       </AnimatePresence>
 
       {/* Story bars */}
-      <div className="absolute top-3 left-4 right-4 flex gap-1.5 z-10">
+      <div className="absolute left-4 right-4 top-3 z-10 flex gap-1.5">
         {PHASE_DURATIONS.map((dur, i) => (
           <StoryBar key={i} active={phase === i} done={phase > i} duration={dur} />
         ))}
       </div>
 
       {/* Skip button */}
-      <button onClick={onDone} className="absolute bottom-[calc(1.75rem+env(safe-area-inset-bottom))] right-6 z-20 flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-5 py-2 text-sm font-medium text-white/45 hover:text-white/75 hover:bg-white/[0.08] transition-colors">
+      <button onClick={onDone} className="absolute bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-20 flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.06] px-4 py-1.5 text-xs font-medium text-white/55 transition-colors hover:bg-white/[0.08] hover:text-white/75 sm:bottom-[calc(1.75rem+env(safe-area-inset-bottom))] sm:right-6 sm:gap-1.5 sm:px-5 sm:py-2 sm:text-sm">
         Skip
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
       </button>
 
       {/* Content */}
-      <div className="flex flex-col items-center gap-8 px-6 w-full max-w-lg">
+      <div className="flex w-full max-w-lg flex-col items-center gap-5 sm:gap-8">
 
         {/* Phase text */}
         <AnimatePresence mode="wait">
           {phase === 0 && (
             <motion.div key="brand" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.5 }} className="text-center">
-              <h1 className="text-5xl sm:text-6xl font-black tracking-tight text-white mb-4">Cindr.</h1>
-              <p className="text-lg sm:text-xl text-white/55 leading-relaxed">
+              <h1 className="mb-3 text-4xl font-black tracking-tight text-white sm:mb-4 sm:text-6xl">Cindr.</h1>
+              <p className="text-base leading-relaxed text-white/55 sm:text-xl">
                 Instead of swiping for dates,<br />
                 <span className="text-white font-semibold">you swipe for movies.</span>
               </p>
@@ -183,33 +183,33 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
           {phase === 1 && (
             <motion.div key="right" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.4 }} className="text-center">
               <div className="flex items-center justify-center gap-2.5 mb-2">
-                <span className="text-[var(--color-cindr)] text-2xl font-black">→</span>
-                <span className="text-2xl font-bold text-white">Like it.</span>
+                <span className="text-xl font-black text-[var(--color-cindr)] sm:text-2xl">→</span>
+                <span className="text-xl font-bold text-white sm:text-2xl">Like it.</span>
               </div>
-              <p className="text-base text-white/40">Swipe right to add to your reel.</p>
+              <p className="text-sm text-white/40 sm:text-base">Swipe right to add to your reel.</p>
             </motion.div>
           )}
           {phase === 2 && (
             <motion.div key="left" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.4 }} className="text-center">
               <div className="flex items-center justify-center gap-2.5 mb-2">
-                <span className="text-red-400 text-2xl font-black">←</span>
-                <span className="text-2xl font-bold text-white">Not feeling it?</span>
+                <span className="text-xl font-black text-red-400 sm:text-2xl">←</span>
+                <span className="text-xl font-bold text-white sm:text-2xl">Not feeling it?</span>
               </div>
-              <p className="text-base text-white/40">Swipe left to skip.</p>
+              <p className="text-sm text-white/40 sm:text-base">Swipe left to skip.</p>
             </motion.div>
           )}
           {phase === 3 && (
             <motion.div key="trailer-text" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.4 }} className="text-center">
               <div className="flex items-center justify-center gap-2.5 mb-2">
-                <span className="text-white/70 text-2xl font-black">↑</span>
-                <span className="text-2xl font-bold text-white">Watch the trailer.</span>
+                <span className="text-xl font-black text-white/70 sm:text-2xl">↑</span>
+                <span className="text-xl font-bold text-white sm:text-2xl">Watch the trailer.</span>
               </div>
-              <p className="text-base text-white/40">Swipe up or tap Trailer before you decide.</p>
+              <p className="text-sm text-white/40 sm:text-base">Swipe up or tap Trailer before you decide.</p>
             </motion.div>
           )}
           {phase === 4 && (
             <motion.div key="hook" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.45 }} className="text-center">
-              <p className="text-2xl sm:text-3xl font-bold text-white leading-snug">
+              <p className="text-xl font-bold leading-snug text-white sm:text-3xl">
                 The more you swipe,<br />
                 <span className="text-[var(--color-cindr)]">the sharper it gets.</span>
               </p>
@@ -217,8 +217,8 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
           )}
           {phase === 5 && (
             <motion.div key="cta" initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.55, ease: "easeOut" }} className="text-center flex flex-col items-center gap-6">
-              <p className="text-2xl sm:text-3xl font-black text-white tracking-tight">Ready to find your reel?</p>
-              <button onClick={onDone} className="rounded-full bg-[var(--color-cindr)] px-10 py-4 text-lg font-semibold text-white shadow-[0_0_40px_rgba(216,90,48,0.5)] hover:bg-[var(--color-cindr-hover)] transition-all hover:scale-105 active:scale-[0.97]">
+              <p className="text-2xl font-black tracking-tight text-white sm:text-3xl">Ready to find your reel?</p>
+              <button onClick={onDone} className="rounded-full bg-[var(--color-cindr)] px-8 py-3.5 text-base font-semibold text-white shadow-[0_0_40px_rgba(216,90,48,0.5)] transition-all hover:scale-105 hover:bg-[var(--color-cindr-hover)] active:scale-[0.97] sm:px-10 sm:py-4 sm:text-lg">
                 Set your taste →
               </button>
             </motion.div>
@@ -232,9 +232,10 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
             <motion.div
               animate={cardControls}
               initial={{ y: 80, opacity: 0, x: 0, rotate: 0, scale: 1 }}
-              className="relative w-[min(18rem,82vw)] h-[min(432px,72dvh)] sm:w-80 sm:h-[480px] rounded-[2rem] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.7)]"
+              className="relative h-[min(350px,54svh)] w-[min(15.5rem,76vw)] overflow-hidden rounded-[1.75rem] shadow-[0_40px_100px_rgba(0,0,0,0.7)] sm:h-[480px] sm:w-80 sm:rounded-[2rem]"
             >
-              <Image src={posterUrl(card.poster) ?? ""} alt={card.title} fill sizes="320px" className="object-cover" priority />
+              <Image src={posterUrl(card.poster) ?? ""} alt="" fill sizes="320px" className="scale-110 object-cover opacity-45 blur-xl" priority aria-hidden="true" />
+              <Image src={posterUrl(card.poster) ?? ""} alt={card.title} fill sizes="320px" className="object-contain object-center" priority />
               <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/25 to-transparent" />
               <div className="absolute inset-0 rounded-[1.5rem] ring-1 ring-inset ring-white/12" />
 
@@ -258,7 +259,7 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
               </AnimatePresence>
 
               {/* Card info */}
-              <div className="absolute bottom-0 left-0 right-0 p-5">
+              <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
                 <div className="flex gap-2 mb-2">
                   {card.genres.map((g) => (
                     <span key={g} className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/15 text-white/85 ring-1 ring-white/10">{g}</span>
@@ -322,13 +323,13 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
               {(phase === 1 || phase === 2 || phase === 3) && !trailerOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.3 }}
-                  className="absolute -bottom-14 left-0 right-0 flex items-center justify-center gap-3 sm:gap-4"
+                  className="absolute -bottom-12 left-0 right-0 flex items-center justify-center gap-2.5 sm:-bottom-14 sm:gap-4"
                 >
                   {/* Skip */}
                   <motion.div
                     animate={phase === 2 ? { scale: [1, 1.18, 1], boxShadow: ["0 0 0px rgba(248,113,113,0)", "0 0 24px rgba(248,113,113,0.6)", "0 0 0px rgba(248,113,113,0)"] } : { scale: 1 }}
                     transition={{ duration: 0.6, delay: 0.3 }}
-                    className="grid h-12 w-12 place-items-center rounded-full border border-red-400/45 bg-[#14141b]/90 text-red-300"
+                    className="grid h-11 w-11 place-items-center rounded-full border border-red-400/45 bg-[#14141b]/90 text-red-300 sm:h-12 sm:w-12"
                   >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
                   </motion.div>
@@ -344,7 +345,7 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
                       ],
                     } : { scale: 1, boxShadow: "0 0 0 1px rgba(216,90,48,0.35) inset, 0 0 12px rgba(216,90,48,0.15)" }}
                     transition={{ duration: 0.7, delay: 0.2 }}
-                    className="flex h-10 items-center gap-1.5 rounded-full bg-[var(--color-cindr)]/10 px-4"
+                    className="flex h-9 items-center gap-1.5 rounded-full bg-[var(--color-cindr)]/10 px-3.5 sm:h-10 sm:px-4"
                   >
                     <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--color-cindr)]/20">
                       <svg width="7" height="8" viewBox="0 0 9 10" fill="currentColor" className="translate-x-[1px] text-[var(--color-cindr)]"><path d="M8.5 5L0.5 0.669873V9.33013L8.5 5Z" /></svg>
@@ -356,7 +357,7 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
                   <motion.div
                     animate={phase === 1 ? { scale: [1, 1.18, 1], boxShadow: ["0 0 0px rgba(216,90,48,0)", "0 0 28px rgba(216,90,48,0.65)", "0 0 0px rgba(216,90,48,0)"] } : { scale: 1 }}
                     transition={{ duration: 0.6, delay: 0.3 }}
-                    className="grid h-14 w-14 place-items-center rounded-full border border-[var(--color-cindr)]/60 bg-[var(--color-cindr)] text-white"
+                    className="grid h-12 w-12 place-items-center rounded-full border border-[var(--color-cindr)]/60 bg-[var(--color-cindr)] text-white sm:h-14 sm:w-14"
                   >
                     <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
                       <path d="M6 13.5h20v11.25A2.25 2.25 0 0 1 23.75 27H8.25A2.25 2.25 0 0 1 6 24.75V13.5Z" stroke="currentColor" strokeWidth="2.3" strokeLinejoin="round" />

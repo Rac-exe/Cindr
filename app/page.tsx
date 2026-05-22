@@ -217,7 +217,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen relative overflow-hidden">
+    <div className="flex min-h-[100svh] flex-col relative overflow-hidden md:min-h-screen">
       {/* Cinematic decorations spread across the whole page */}
       <div className="pointer-events-none absolute inset-0 text-[#F0642F] drop-shadow-[0_0_4px_rgba(216,90,48,0.8)] drop-shadow-[0_0_12px_rgba(216,90,48,0.45)]">
         {/* Film reels */}
@@ -255,9 +255,9 @@ export default function LandingPage() {
         <PlayButton className="absolute bottom-[40%] right-[8%] w-10 opacity-42 hidden md:block" />
       </div>
 
-      <header className="relative z-30 flex items-center justify-between px-6 py-5">
+      <header className="relative z-30 flex items-center justify-between px-5 py-4 sm:px-6 sm:py-5">
         <Link href="/" className="inline-flex items-center" aria-label="Cindr home">
-          <CindrLogo markClassName="h-10 w-10" textClassName="text-3xl" />
+          <CindrLogo markClassName="h-9 w-9 sm:h-10 sm:w-10" textClassName="text-2xl sm:text-3xl" />
         </Link>
         {isSignedIn ? (
           <div ref={profileMenuRef} className="relative">
@@ -326,7 +326,7 @@ export default function LandingPage() {
             )}
           </div>
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="hidden items-center gap-3 sm:flex">
             <Link
               href="/about"
               className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/75 shadow-[0_0_18px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-colors hover:border-white/20 hover:bg-white/[0.08] hover:text-white sm:px-3.5"
@@ -431,15 +431,15 @@ export default function LandingPage() {
         </div>
       )}
 
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center">
+      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-5 pb-6 text-center sm:px-6 sm:pb-0">
         <div className="max-w-lg mx-auto">
-          <div className="flex items-center justify-center gap-3 mb-6">
+          <div className="mb-5 flex items-center justify-center gap-3 sm:mb-6">
             <div className="w-10 h-px bg-[var(--color-cindr)] opacity-60" />
             <div className="w-2 h-2 rounded-full bg-[var(--color-cindr)] opacity-50" />
             <div className="w-10 h-px bg-[var(--color-cindr)] opacity-60" />
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-4">
+          <h1 className="mb-4 text-[2.45rem] font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
             Find your perfect match.
             <br />
             <span className="text-[var(--color-cindr)] drop-shadow-[0_0_40px_rgba(216,90,48,0.4)]">
@@ -447,7 +447,7 @@ export default function LandingPage() {
             </span>
           </h1>
 
-          <p className="text-lg text-[var(--muted)] mb-10 max-w-md mx-auto leading-relaxed">
+          <p className="mx-auto mb-8 max-w-md text-base leading-relaxed text-[var(--muted)] sm:mb-10 sm:text-lg">
             Stop scrolling. Start swiping. One movie at a time, personalised to
             your taste.
           </p>
@@ -477,7 +477,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="mt-14 grid w-full max-w-2xl grid-cols-1 gap-3 sm:mt-20 sm:grid-cols-3 sm:gap-5">
+        <div className="mt-14 hidden w-full max-w-2xl grid-cols-1 gap-3 sm:mt-20 sm:grid sm:grid-cols-3 sm:gap-5">
           <Feature
             icon={
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -494,7 +494,7 @@ export default function LandingPage() {
               </svg>
             }
             title="Watch trailers"
-            description="Swipe right and the trailer plays instantly. No hunting around."
+            description="Tap Trailer or swipe up before you decide."
           />
           <Feature
             icon={
@@ -508,7 +508,7 @@ export default function LandingPage() {
         </div>
       </main>
 
-      <footer className="relative z-10 py-6 text-center">
+      <footer className="relative z-10 hidden py-6 text-center sm:block">
         <p className="text-[10px] text-[var(--muted)] opacity-60">
           This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.
         </p>

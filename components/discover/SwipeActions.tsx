@@ -14,7 +14,7 @@ export default function SwipeActions({ onSkip, onLike, onOpenTrailer, dragDirect
   const trailerActive = dragDirection === "up" || trailerOpen;
 
   return (
-    <div className="absolute -bottom-[4.5rem] left-0 right-0 z-20 flex items-center justify-center gap-4 sm:-bottom-[5rem] sm:gap-5">
+    <div className="absolute -bottom-[4.15rem] left-0 right-0 z-20 flex items-center justify-center gap-3 sm:-bottom-[5rem] sm:gap-5">
       {/* Skip */}
       <button
         onClick={onSkip}
@@ -25,7 +25,7 @@ export default function SwipeActions({ onSkip, onLike, onOpenTrailer, dragDirect
             ? "0 0 28px rgba(248,113,113,0.55), 0 18px 50px rgba(0,0,0,0.45)"
             : "0 18px 50px rgba(0,0,0,0.45)",
         }}
-        className={`grid h-14 w-14 place-items-center rounded-full backdrop-blur-md hover:scale-105 active:scale-[0.96] sm:h-[3.75rem] sm:w-[3.75rem] ${
+        className={`grid h-[3.25rem] w-[3.25rem] place-items-center rounded-full backdrop-blur-md hover:scale-105 active:scale-[0.96] sm:h-[3.75rem] sm:w-[3.75rem] ${
           skipActive
             ? "border-2 border-red-400 bg-red-500/20 text-red-300"
             : "border border-red-400/45 bg-[#14141b]/90 text-red-300"
@@ -58,7 +58,7 @@ export default function SwipeActions({ onSkip, onLike, onOpenTrailer, dragDirect
               (e.currentTarget as HTMLButtonElement).style.boxShadow =
                 "0 0 0 1px rgba(216,90,48,0.35) inset, 0 0 18px rgba(216,90,48,0.18), 0 12px 32px rgba(0,0,0,0.4)";
           }}
-          className={`flex h-12 items-center gap-2 rounded-full px-5 backdrop-blur-md hover:scale-105 active:scale-[0.96] ${
+          className={`flex h-11 items-center gap-1.5 rounded-full px-4 backdrop-blur-md hover:scale-105 active:scale-[0.96] sm:h-12 sm:gap-2 sm:px-5 ${
             trailerActive ? "bg-[var(--color-cindr)]/20" : "bg-[var(--color-cindr)]/10"
           }`}
           aria-label="Watch trailer"
@@ -83,7 +83,7 @@ export default function SwipeActions({ onSkip, onLike, onOpenTrailer, dragDirect
             ? "0 0 40px rgba(216,90,48,0.65), 0 18px 50px rgba(0,0,0,0.45)"
             : "0 0 28px rgba(216,90,48,0.38), 0 18px 50px rgba(0,0,0,0.45)",
         }}
-        className="grid h-16 w-16 place-items-center rounded-full border border-[var(--color-cindr)]/60 bg-[var(--color-cindr)] text-white hover:scale-105 active:scale-[0.96] sm:h-[4.25rem] sm:w-[4.25rem]"
+        className="grid h-[3.75rem] w-[3.75rem] place-items-center rounded-full border border-[var(--color-cindr)]/60 bg-[var(--color-cindr)] text-white hover:scale-105 active:scale-[0.96] sm:h-[4.25rem] sm:w-[4.25rem]"
         aria-label="Add to your reel"
       >
         <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">

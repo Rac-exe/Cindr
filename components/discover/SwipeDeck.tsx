@@ -46,7 +46,7 @@ export default function SwipeDeck({
   }
 
   return (
-    <div className="relative mx-auto h-[min(calc(100dvh-25rem),480px)] w-[min(90vw,390px)] sm:h-[min(calc(100dvh-24rem),540px)] sm:w-[min(92vw,430px)] md:h-[min(calc(100dvh-22rem),620px)] md:w-[min(92vw,440px)]">
+    <div className="relative mx-auto h-[clamp(310px,calc(100svh-21rem),460px)] w-[min(84vw,360px)] sm:h-[min(calc(100dvh-24rem),540px)] sm:w-[min(92vw,430px)] md:h-[min(calc(100dvh-22rem),620px)] md:w-[min(92vw,440px)]">
       {visibleCards.map((card, i) => (
         <SwipeCard
           key={`${card.media_type ?? "movie"}-${card.id}`}
@@ -225,16 +225,29 @@ function SwipeCard({
         />
         <div className="relative h-full w-full overflow-hidden rounded-[calc(2rem-1px)] bg-[var(--surface)]">
           {card.posterUrl ? (
-            <Image
-              src={card.posterUrl}
-              alt={card.title}
-              fill
-              sizes="(max-width: 640px) 90vw, 430px"
-              priority={index === 0}
-              loading="eager"
-              className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
-              draggable={false}
-            />
+            <>
+              <Image
+                src={card.posterUrl}
+                alt=""
+                fill
+                sizes="(max-width: 640px) 84vw, 430px"
+                priority={index === 0}
+                loading="eager"
+                className="scale-110 object-cover opacity-45 blur-xl"
+                draggable={false}
+                aria-hidden="true"
+              />
+              <Image
+                src={card.posterUrl}
+                alt={card.title}
+                fill
+                sizes="(max-width: 640px) 84vw, 430px"
+                priority={index === 0}
+                loading="eager"
+                className="object-contain object-center transition-transform duration-700 ease-out group-hover:scale-[1.015]"
+                draggable={false}
+              />
+            </>
           ) : (
             <div className="absolute inset-0 bg-[var(--surface)] flex items-center justify-center">
               <svg className="h-16 w-16 text-[var(--color-cindr)] opacity-45" viewBox="0 0 60 60" fill="none">

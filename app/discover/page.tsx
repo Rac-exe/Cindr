@@ -801,10 +801,10 @@ export default function DiscoverPage() {
   }, [cards, requestKeyboardSwipe, selectedMovie]);
 
   return (
-    <div className="flex flex-col min-h-[100dvh] relative overflow-hidden">
+    <div className="relative flex h-[100svh] min-h-[100svh] flex-col overflow-hidden md:h-[100dvh] md:min-h-[100dvh]">
       <CinematicBackdrop density="subtle" />
       <AppHeader />
-      <main className="flex-1 flex flex-col items-center justify-center pt-14 pb-[calc(8.5rem+env(safe-area-inset-bottom))] md:pt-16 md:pb-28 px-4 relative z-10">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center px-3 pb-[calc(6.25rem+env(safe-area-inset-bottom))] pt-[4.65rem] sm:px-4 md:pt-16 md:pb-28">
         <ModeToggle
           mode={preferences.discoverMode}
           disabled={!preferencesReady}
@@ -843,7 +843,7 @@ export default function DiscoverPage() {
         {lastSwipe && !selectedMovie && (
           <button
             onClick={undoLastSwipe}
-            className="fixed bottom-[calc(7rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full border border-white/10 bg-[#111015]/90 px-4 py-2 text-xs font-semibold text-white/85 shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:border-[var(--color-cindr)]/45 hover:text-white md:bottom-10 md:right-6"
+            className="fixed bottom-[calc(9.25rem+env(safe-area-inset-bottom))] right-3 z-40 rounded-full border border-white/10 bg-[#111015]/90 px-3.5 py-2 text-xs font-semibold text-white/85 shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:border-[var(--color-cindr)]/45 hover:text-white md:bottom-10 md:right-6"
           >
             Undo
           </button>

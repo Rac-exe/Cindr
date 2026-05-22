@@ -98,25 +98,25 @@ export default function SignupPage() {
   }
 
   const inputClass =
-    "w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border-color)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--color-cindr)] transition-colors";
+    "w-full rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] transition-colors focus:border-[var(--color-cindr)] focus:outline-none sm:py-3";
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 pb-10 pt-24 relative overflow-hidden">
+    <div className="relative flex h-[100svh] min-h-[100svh] flex-col items-center justify-center overflow-hidden px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-[4.65rem] sm:min-h-screen sm:px-6 sm:pb-10 sm:pt-24">
       <CinematicBackdrop density="balanced" />
       <AppHeader />
-      <div className="w-full max-w-sm relative z-10 rounded-[2rem] border border-white/10 bg-[#111015]/80 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
-        <Link href="/" className="block text-center mb-8">
+      <div className="relative z-10 max-h-[calc(100svh-5.5rem)] w-full max-w-sm overflow-y-auto rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:rounded-[2rem] sm:p-6">
+        <Link href="/" className="mb-5 block text-center sm:mb-8">
           <span className="text-2xl font-semibold tracking-tight">
             Cin<span className="text-[var(--color-cindr)]">dr</span>
           </span>
         </Link>
 
-        <h1 className="text-xl font-bold text-center mb-2">Create account</h1>
-        <p className="text-center text-sm text-[var(--muted)] mb-6">
+        <h1 className="mb-2 text-center text-xl font-bold">Create account</h1>
+        <p className="mb-4 text-center text-sm text-[var(--muted)] sm:mb-6">
           Save movies, build your watchlist, track what you&apos;ve seen.
         </p>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2.5 sm:gap-3">
           <input
             type="text"
             placeholder="Your name"
@@ -134,7 +134,7 @@ export default function SignupPage() {
             required
           />
           <div>
-            <label className="block text-xs text-[var(--muted)] mb-1.5 ml-1">
+            <label className="mb-1 ml-1 block text-xs text-[var(--muted)] sm:mb-1.5">
               Date of birth
             </label>
             <div className="relative">
@@ -187,13 +187,13 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-full bg-[var(--color-cindr)] text-white font-medium text-sm hover:bg-[var(--color-cindr-hover)] transition-colors disabled:opacity-50"
+            className="w-full rounded-full bg-[var(--color-cindr)] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-cindr-hover)] disabled:opacity-50 sm:py-3"
           >
             {loading ? "Creating account..." : "Sign up"}
           </button>
         </form>
 
-        <p className="text-center text-sm text-[var(--muted)] mt-6">
+        <p className="mt-4 text-center text-sm text-[var(--muted)] sm:mt-6">
           Already have an account?{" "}
           <Link
             href="/auth/login"
