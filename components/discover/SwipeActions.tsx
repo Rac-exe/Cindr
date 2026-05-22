@@ -4,12 +4,14 @@ interface SwipeActionsProps {
   onSkip: () => void;
   onLike: () => void;
   onOpenTrailer?: () => void;
-  dragDirection?: "left" | "right" | null;
+  dragDirection?: "left" | "right" | "up" | null;
+  trailerOpen?: boolean;
 }
 
-export default function SwipeActions({ onSkip, onLike, onOpenTrailer, dragDirection }: SwipeActionsProps) {
+export default function SwipeActions({ onSkip, onLike, onOpenTrailer, dragDirection, trailerOpen }: SwipeActionsProps) {
   const skipActive = dragDirection === "left";
   const likeActive = dragDirection === "right";
+  const trailerActive = dragDirection === "up" || trailerOpen;
 
   return (
     <div className="absolute -bottom-[4.5rem] left-0 right-0 z-20 flex items-center justify-center gap-4 sm:-bottom-[5rem] sm:gap-5">
@@ -40,27 +42,34 @@ export default function SwipeActions({ onSkip, onLike, onOpenTrailer, dragDirect
         <button
           onClick={onOpenTrailer}
           style={{
-            boxShadow: "0 0 0 1px rgba(255,255,255,0.08) inset, 0 12px 32px rgba(0,0,0,0.4)",
+            transform: trailerActive ? "scale(1.12)" : undefined,
+            boxShadow: trailerActive
+              ? "0 0 0 1.5px rgba(216,90,48,0.9) inset, 0 0 36px rgba(216,90,48,0.55), 0 12px 32px rgba(0,0,0,0.4)"
+              : "0 0 0 1px rgba(216,90,48,0.35) inset, 0 0 18px rgba(216,90,48,0.18), 0 12px 32px rgba(0,0,0,0.4)",
             transition: "box-shadow 0.2s ease, background 0.2s ease, transform 0.15s ease",
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.boxShadow =
-              "0 0 0 1px rgba(255,255,255,0.18) inset, 0 0 22px rgba(216,90,48,0.22), 0 12px 32px rgba(0,0,0,0.4)";
+            if (!trailerActive)
+              (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                "0 0 0 1px rgba(216,90,48,0.6) inset, 0 0 28px rgba(216,90,48,0.35), 0 12px 32px rgba(0,0,0,0.4)";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.boxShadow =
-              "0 0 0 1px rgba(255,255,255,0.08) inset, 0 12px 32px rgba(0,0,0,0.4)";
+            if (!trailerActive)
+              (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                "0 0 0 1px rgba(216,90,48,0.35) inset, 0 0 18px rgba(216,90,48,0.18), 0 12px 32px rgba(0,0,0,0.4)";
           }}
-          className="flex h-12 items-center gap-2 rounded-full bg-white/[0.06] px-5 backdrop-blur-md hover:scale-105 active:scale-[0.96]"
+          className={`flex h-12 items-center gap-2 rounded-full px-5 backdrop-blur-md hover:scale-105 active:scale-[0.96] ${
+            trailerActive ? "bg-[var(--color-cindr)]/20" : "bg-[var(--color-cindr)]/10"
+          }`}
           aria-label="Watch trailer"
         >
           {/* Play triangle */}
-          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/10">
-            <svg width="9" height="10" viewBox="0 0 9 10" fill="currentColor" className="translate-x-[1px] text-white/80">
+          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--color-cindr)]/20">
+            <svg width="9" height="10" viewBox="0 0 9 10" fill="currentColor" className="translate-x-[1px] text-[var(--color-cindr)]">
               <path d="M8.5 5L0.5 0.669873V9.33013L8.5 5Z" />
             </svg>
           </span>
-          <span className="text-[11px] font-semibold tracking-wide text-white/65">Trailer</span>
+          <span className="text-[11px] font-semibold tracking-wide text-[var(--color-cindr)]">Trailer</span>
         </button>
       ) : (
         <div className="h-12 w-[6.5rem]" />
