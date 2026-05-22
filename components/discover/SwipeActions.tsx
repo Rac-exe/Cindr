@@ -12,66 +12,59 @@ export default function SwipeActions({ onSkip, onLike, onOpenTrailer, dragDirect
   const likeActive = dragDirection === "right";
 
   return (
-    <div className="absolute -bottom-[4.5rem] left-0 right-0 z-20 flex flex-col items-center gap-2 sm:-bottom-[5.5rem]">
-      {/* Trailer button — center, above skip/like */}
-      {onOpenTrailer && (
-        <button
-          onClick={onOpenTrailer}
-          className="flex items-center gap-1.5 rounded-full border border-white/15 bg-[#111015]/80 px-4 py-1.5 text-[11px] font-semibold text-white/55 backdrop-blur-md transition-all hover:border-white/30 hover:text-white/85 hover:bg-white/[0.08]"
-          aria-label="Watch trailer"
-        >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 19V5M5 12l7-7 7 7" />
-          </svg>
-          Trailer
-        </button>
-      )}
-      <div className="flex items-center gap-5 sm:gap-6">
+    <div className="absolute -bottom-[4.5rem] left-0 right-0 z-20 flex items-center justify-center gap-4 sm:-bottom-[5rem] sm:gap-5">
+      {/* Skip */}
       <button
         onClick={onSkip}
         style={{
           transform: skipActive ? "scale(1.18)" : undefined,
           transition: "transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease",
-          boxShadow: skipActive ? "0 0 28px rgba(248,113,113,0.55), 0 18px 50px rgba(0,0,0,0.45)" : "0 18px 50px rgba(0,0,0,0.45)",
+          boxShadow: skipActive
+            ? "0 0 28px rgba(248,113,113,0.55), 0 18px 50px rgba(0,0,0,0.45)"
+            : "0 18px 50px rgba(0,0,0,0.45)",
         }}
-        className={`grid h-14 w-14 place-items-center rounded-full backdrop-blur-md hover:scale-105 active:scale-[0.96] sm:h-15 sm:w-15 ${
+        className={`grid h-14 w-14 place-items-center rounded-full backdrop-blur-md hover:scale-105 active:scale-[0.96] sm:h-[3.75rem] sm:w-[3.75rem] ${
           skipActive
             ? "border-2 border-red-400 bg-red-500/20 text-red-300"
             : "border border-red-400/45 bg-[#14141b]/90 text-red-300"
         }`}
         aria-label="Skip"
       >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <path d="M18 6L6 18M6 6l12 12" />
         </svg>
       </button>
+
+      {/* Trailer — center */}
+      {onOpenTrailer ? (
+        <button
+          onClick={onOpenTrailer}
+          className="flex h-11 w-11 flex-col items-center justify-center gap-0.5 rounded-full border border-white/15 bg-[#111015]/80 text-white/55 backdrop-blur-md transition-all hover:border-white/30 hover:bg-white/[0.08] hover:text-white/85"
+          aria-label="Watch trailer"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 19V5M5 12l7-7 7 7" />
+          </svg>
+          <span className="text-[8px] font-semibold uppercase tracking-wide leading-none">Trailer</span>
+        </button>
+      ) : (
+        <div className="h-11 w-11" />
+      )}
+
+      {/* Like */}
       <button
         onClick={onLike}
         style={{
           transform: likeActive ? "scale(1.18)" : undefined,
           transition: "transform 0.15s ease, box-shadow 0.15s ease",
           boxShadow: likeActive
-            ? "0 0 40px rgba(216,90,48,0.65), 0 18px_50px_rgba(0,0,0,0.45)"
+            ? "0 0 40px rgba(216,90,48,0.65), 0 18px 50px rgba(0,0,0,0.45)"
             : "0 0 28px rgba(216,90,48,0.38), 0 18px 50px rgba(0,0,0,0.45)",
         }}
-        className="grid h-16 w-16 place-items-center rounded-full border border-[var(--color-cindr)]/60 bg-[var(--color-cindr)] text-white hover:scale-105 active:scale-[0.96] sm:h-17 sm:w-17"
+        className="grid h-16 w-16 place-items-center rounded-full border border-[var(--color-cindr)]/60 bg-[var(--color-cindr)] text-white hover:scale-105 active:scale-[0.96] sm:h-[4.25rem] sm:w-[4.25rem]"
         aria-label="Add to your reel"
       >
-        <svg
-          width="30"
-          height="30"
-          viewBox="0 0 32 32"
-          fill="none"
-          aria-hidden="true"
-        >
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <path
             d="M6 13.5h20v11.25A2.25 2.25 0 0 1 23.75 27H8.25A2.25 2.25 0 0 1 6 24.75V13.5Z"
             stroke="currentColor"
@@ -92,7 +85,6 @@ export default function SwipeActions({ onSkip, onLike, onOpenTrailer, dragDirect
           />
         </svg>
       </button>
-      </div>
     </div>
   );
 }

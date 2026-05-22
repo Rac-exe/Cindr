@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookmarkSimple, Eye, Heart, Star } from "@phosphor-icons/react";
+import { Eye, Heart, Star } from "@phosphor-icons/react";
 import type { Movie, MovieCardData, WatchProvider } from "@/types/movie";
 import { posterUrl } from "@/types/movie";
 import {
@@ -476,27 +476,7 @@ export default function TrailerDialog({
                   <OverviewText text={displayOverview} />
                 )}
 
-                <div className="mb-4 grid grid-cols-4 gap-2">
-                  <button
-                    disabled={saving}
-                    onClick={() =>
-                      patchCurrentInteraction({
-                        watchlisted: !activeInteraction?.watchlisted,
-                      })
-                    }
-                    aria-label={activeInteraction?.watchlisted ? "Remove from watchlist" : "Add to watchlist"}
-                    title={activeInteraction?.watchlisted ? "Remove from watchlist" : "Add to watchlist"}
-                    className={`grid h-12 w-full place-items-center rounded-xl border transition-colors disabled:opacity-50 ${
-                      activeInteraction?.watchlisted
-                        ? "border-red-400/60 bg-red-500/15 text-red-200 shadow-[0_0_18px_rgba(248,113,113,0.16)]"
-                        : "border-[var(--border-color)] text-white/75 hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-100"
-                    }`}
-                  >
-                    <BookmarkSimple
-                      size={21}
-                      weight={activeInteraction?.watchlisted ? "fill" : "regular"}
-                    />
-                  </button>
+                <div className="mb-4 grid grid-cols-3 gap-2">
                   <button
                     disabled={saving}
                     onClick={() =>

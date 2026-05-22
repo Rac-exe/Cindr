@@ -42,7 +42,7 @@ export default function SwipeDeck({
   }
 
   return (
-    <div className="relative mx-auto h-[min(62dvh,520px)] w-[min(90vw,390px)] sm:h-[min(70dvh,620px)] sm:w-[min(92vw,430px)] md:h-[min(74dvh,680px)] md:w-[min(92vw,440px)]">
+    <div className="relative mx-auto h-[min(calc(100dvh-25rem),480px)] w-[min(90vw,390px)] sm:h-[min(calc(100dvh-24rem),540px)] sm:w-[min(92vw,430px)] md:h-[min(calc(100dvh-22rem),620px)] md:w-[min(92vw,440px)]">
       {visibleCards.map((card, i) => (
         <SwipeCard
           key={`${card.media_type ?? "movie"}-${card.id}`}

@@ -712,7 +712,7 @@ export default function DiscoverPage() {
     <div className="flex flex-col min-h-[100dvh] relative overflow-hidden">
       <CinematicBackdrop density="subtle" />
       <AppHeader />
-      <main className="flex-1 flex flex-col items-center justify-center pt-14 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pt-16 md:pb-24 px-4 relative z-10">
+      <main className="flex-1 flex flex-col items-center justify-center pt-14 pb-[calc(8.5rem+env(safe-area-inset-bottom))] md:pt-16 md:pb-28 px-4 relative z-10">
         <ModeToggle
           mode={preferences.discoverMode}
           disabled={!preferencesReady}
@@ -749,7 +749,7 @@ export default function DiscoverPage() {
         {lastSwipe && !selectedMovie && (
           <button
             onClick={undoLastSwipe}
-            className="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full border border-white/10 bg-[#111015]/90 px-4 py-2 text-xs font-semibold text-white/85 shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:border-[var(--color-cindr)]/45 hover:text-white md:bottom-8 md:right-6"
+            className="fixed bottom-[calc(7rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full border border-white/10 bg-[#111015]/90 px-4 py-2 text-xs font-semibold text-white/85 shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:border-[var(--color-cindr)]/45 hover:text-white md:bottom-10 md:right-6"
           >
             Undo
           </button>

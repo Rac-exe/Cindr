@@ -227,39 +227,6 @@ export default function AppHeader() {
         )}
         {!isLanding && (
           <div ref={mobileProfileRef} className="relative flex items-center gap-2 lg:hidden">
-            {!isSignedIn && (
-              <>
-                <Link
-                  href="/auth/login"
-                  className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white"
-                >
-                  Log in
-                </Link>
-                <Link
-                  href="/auth/signup"
-                  className="rounded-full bg-[var(--color-cindr)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-cindr-hover)]"
-                >
-                  Sign up
-                </Link>
-              </>
-            )}
-            <button
-              type="button"
-              onClick={() => setProfileOpen((current) => !current)}
-              className={`grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-sm transition-colors ${
-                pathname.startsWith("/profile")
-                  ? "text-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
-                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
-              aria-label="Open profile menu"
-              aria-expanded={profileOpen}
-              aria-haspopup="menu"
-            >
-              <UserCircle
-                size={23}
-                weight={pathname.startsWith("/profile") ? "fill" : "regular"}
-              />
-            </button>
             {profileOpen && (
               <div className="absolute right-0 top-[3rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
                 <Link
