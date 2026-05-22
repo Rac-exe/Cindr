@@ -50,6 +50,9 @@ export async function GET(
       mediaType === "tv"
         ? await getTVDetails(tmdbId)
         : await getMovieDetails(tmdbId);
+    if (details.adult) {
+      return NextResponse.json({ error: "Title unavailable" }, { status: 404 });
+    }
     const resolution = await resolveTrailer(details);
     const now = new Date().toISOString();
 

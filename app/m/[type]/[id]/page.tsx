@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AppHeader from "@/components/layout/AppHeader";
@@ -21,10 +22,12 @@ function isMediaType(type: string): type is "movie" | "tv" {
 async function getSharedMovie(type: string, id: string): Promise<Movie | null> {
   if (!isMediaType(type)) return null;
   const tmdbId = Number(id);
-  if (!Number.isInteger(tmdbId)) return null;
+  if (!Number.isSafeInteger(tmdbId) || tmdbId <= 0) return null;
 
   try {
-    return type === "tv" ? await getTVDetails(tmdbId) : await getMovieDetails(tmdbId);
+    const movie =
+      type === "tv" ? await getTVDetails(tmdbId) : await getMovieDetails(tmdbId);
+    return movie.adult ? null : movie;
   } catch {
     return null;
   }
@@ -108,9 +111,12 @@ export default async function SharedMoviePage({ params }: SharePageProps) {
         <section className="grid w-full max-w-5xl gap-8 rounded-[2rem] border border-white/10 bg-[#111015]/82 p-4 shadow-[0_28px_100px_rgba(0,0,0,0.6)] backdrop-blur-md md:grid-cols-[minmax(240px,360px)_1fr] md:p-6">
           <div className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-black/30 shadow-[0_18px_60px_rgba(0,0,0,0.45)]">
             {poster ? (
-              <img
+              <Image
                 src={poster}
                 alt={movie.title}
+                width={780}
+                height={1170}
+                sizes="(min-width: 768px) 360px, calc(100vw - 2rem)"
                 className="aspect-[2/3] h-full w-full object-cover"
               />
             ) : (

@@ -132,31 +132,62 @@ export function getQuestionsForTypes(types: string[]): QuizQuestion[] {
   return questions;
 }
 
-export const MOOD_TO_GENRES: Record<string, number[]> = {
-  // Movie moods
+export const MOVIE_MOOD_TO_GENRES: Record<string, number[]> = {
   thriller: [53, 28, 80],
   comedy: [35],
   drama: [18],
   scifi: [878, 9648],
   horror: [27],
   romance: [10749],
-  // Series moods
   crime: [80, 9648],
   scifi_fantasy: [878, 14],
+};
+
+export const TV_MOOD_TO_GENRES: Record<string, number[]> = {
+  thriller: [80, 9648],
+  comedy: [35],
+  drama: [18],
+  scifi: [10765, 9648],
+  horror: [9648],
+  romance: [18],
+  crime: [80, 9648],
+  scifi_fantasy: [10765],
   reality: [10764],
   international: [18],
-  // Anime sub-genres (animation genre base)
+};
+
+export const ANIME_MOVIE_MOOD_TO_GENRES: Record<string, number[]> = {
   anime_action: [28, 16],
   anime_sol: [18, 16],
   anime_thriller: [53, 9648, 16],
   anime_romance: [10749, 16],
   anime_fantasy: [14, 16],
   anime_scifi: [878, 16],
-  // Documentary topics
-  true_crime: [80, 99],
-  nature: [99],
-  history: [36, 99],
-  science: [99, 878],
-  culture: [10402, 99],
-  sports: [99],
+};
+
+export const ANIME_TV_MOOD_TO_GENRES: Record<string, number[]> = {
+  anime_action: [10759, 16],
+  anime_sol: [18, 16],
+  anime_thriller: [9648, 16],
+  anime_romance: [18, 16],
+  anime_fantasy: [10765, 16],
+  anime_scifi: [10765, 16],
+};
+
+export const DOCUMENTARY_MOVIE_TOPIC_GENRES: Record<string, number[]> = {
+  true_crime: [80],
+  nature: [],
+  history: [36],
+  science: [],
+  culture: [10402],
+  sports: [],
+};
+
+export const DOCUMENTARY_TV_TOPIC_GENRES: Record<string, number[]> = {
+  true_crime: [80],
+  nature: [],
+  history: [],
+  science: [],
+  culture: [],
+  sports: [],
 };

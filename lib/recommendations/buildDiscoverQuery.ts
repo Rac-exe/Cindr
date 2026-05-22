@@ -1,4 +1,9 @@
-import { MOOD_TO_GENRES } from "@/lib/constants/quiz";
+import {
+  ANIME_MOVIE_MOOD_TO_GENRES,
+  ANIME_TV_MOOD_TO_GENRES,
+  MOVIE_MOOD_TO_GENRES,
+  TV_MOOD_TO_GENRES,
+} from "@/lib/constants/quiz";
 
 export interface DiscoverParams {
   languages: string[];
@@ -41,6 +46,60 @@ function setPeopleFilters(q: URLSearchParams, params: DiscoverParams): void {
   if (directorIds.length > 0) q.set("with_crew", directorIds.join("|"));
 }
 
+function moodGenreMap(params: DiscoverParams): Record<string, number[]> {
+  if (params.isAnime) {
+    return params.mediaType === "tv"
+      ? ANIME_TV_MOOD_TO_GENRES
+      : ANIME_MOVIE_MOOD_TO_GENRES;
+  }
+  return params.mediaType === "tv" ? TV_MOOD_TO_GENRES : MOVIE_MOOD_TO_GENRES;
+}
+
+function collectMoodGenres(params: DiscoverParams): number[] {
+  const map = moodGenreMap(params);
+  const genreIds = new Set<number>();
+  for (const mood of params.moods) {
+    const ids = map[mood];
+    if (ids) ids.forEach((id) => genreIds.add(id));
+  }
+  return Array.from(genreIds);
+}
+
+function explicitGenresForMedia(params: DiscoverParams): number[] {
+  if (params.mediaType !== "tv") return params.genres;
+
+  const tvGenreMap: Record<number, number[]> = {
+    12: [10759],
+    14: [10765],
+    27: [9648],
+    28: [10759],
+    53: [9648],
+    878: [10765],
+    10749: [18],
+  };
+
+  return params.genres.flatMap((id) => tvGenreMap[id] ?? [id]);
+}
+
+function setGenreFilters(q: URLSearchParams, params: DiscoverParams): void {
+  const moodGenreIds = collectMoodGenres(params);
+  const genreIds = new Set<number>(explicitGenresForMedia(params));
+  moodGenreIds.forEach((id) => genreIds.add(id));
+
+  if (params.isAnime) {
+    const animeSubGenres = Array.from(genreIds).filter((id) => id !== 16);
+    q.set(
+      "with_genres",
+      animeSubGenres.length > 0 ? `16,${animeSubGenres.join("|")}` : "16"
+    );
+    return;
+  }
+
+  if (genreIds.size > 0) {
+    q.set("with_genres", Array.from(genreIds).join("|"));
+  }
+}
+
 export function buildDiscoverQuery(params: DiscoverParams): URLSearchParams {
   const q = new URLSearchParams();
 
@@ -51,27 +110,19 @@ export function buildDiscoverQuery(params: DiscoverParams): URLSearchParams {
 
   if (params.isAnime) {
     q.set("with_original_language", "ja");
-    q.set("with_genres", "16");
+    setGenreFilters(q, params);
   } else {
     if (params.languages.length > 0) {
       q.set("with_original_language", params.languages.join("|"));
     }
-
-    const genreIds = new Set<number>(params.genres);
-    for (const mood of params.moods) {
-      const ids = MOOD_TO_GENRES[mood];
-      if (ids) ids.forEach((id) => genreIds.add(id));
-    }
-    if (genreIds.size > 0) {
-      q.set("with_genres", Array.from(genreIds).join("|"));
-    }
+    setGenreFilters(q, params);
   }
 
   const now = new Date();
   const year = now.getFullYear();
   if (params.yearFrom || params.yearTo) {
     setYearRange(q, params);
-  } else {
+  } else if (params.mediaType !== "tv") {
     const prefix = dateParamPrefix(params);
     switch (params.era) {
       case "new":
@@ -87,17 +138,19 @@ export function buildDiscoverQuery(params: DiscoverParams): URLSearchParams {
     }
   }
 
-  switch (params.length) {
-    case "short":
-      q.set("with_runtime.lte", "100");
-      break;
-    case "medium":
-      q.set("with_runtime.gte", "100");
-      q.set("with_runtime.lte", "150");
-      break;
-    case "long":
-      q.set("with_runtime.gte", "150");
-      break;
+  if (params.mediaType === "tv") {
+    switch (params.length) {
+      case "short":
+        q.set("with_runtime.lte", "100");
+        break;
+      case "medium":
+        q.set("with_runtime.gte", "100");
+        q.set("with_runtime.lte", "150");
+        break;
+      case "long":
+        q.set("with_runtime.gte", "150");
+        break;
+    }
   }
 
   q.set("vote_count.gte", "20");
@@ -115,14 +168,12 @@ export function buildRelaxedQuery(params: DiscoverParams): URLSearchParams {
 
   if (params.isAnime) {
     q.set("with_original_language", "ja");
-    q.set("with_genres", "16");
+    setGenreFilters(q, params);
   } else {
     if (params.languages.length > 0) {
       q.set("with_original_language", params.languages.join("|"));
     }
-    if (params.genres.length > 0) {
-      q.set("with_genres", params.genres.join("|"));
-    }
+    setGenreFilters(q, { ...params, moods: [] });
   }
 
   setYearRange(q, params);
