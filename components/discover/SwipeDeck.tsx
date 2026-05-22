@@ -270,23 +270,23 @@ function SwipeCard({
             </>
           )}
 
-          <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
+          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
             {card.becauseOf && showRecommendedChip && (
-              <div className="mb-2.5 flex items-center">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-cindr)] px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-[0_2px_12px_rgba(216,90,48,0.5)]">
-                  <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor">
+              <div className="mb-2 flex items-center min-w-0">
+                <span className="inline-flex min-w-0 items-center gap-1.5 truncate rounded-full bg-[var(--color-cindr)] px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-[0_2px_12px_rgba(216,90,48,0.5)]">
+                  <svg className="shrink-0" width="8" height="8" viewBox="0 0 8 8" fill="currentColor">
                     <path d="M4 0L5 3H8L5.5 4.8L6.5 8L4 6.2L1.5 8L2.5 4.8L0 3H3L4 0Z"/>
                   </svg>
-                  Recommended for you
+                  <span className="truncate">Recommended for you</span>
                 </span>
               </div>
             )}
-            <div className="mb-3 h-1 w-12 rounded-full bg-[var(--color-cindr)] shadow-[0_0_18px_rgba(216,90,48,0.5)]" />
-            <div className="flex items-center gap-2 mb-3">
+            <div className="mb-2.5 h-1 w-10 rounded-full bg-[var(--color-cindr)] shadow-[0_0_18px_rgba(216,90,48,0.5)]" />
+            <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
               {card.genres.slice(0, 2).map((g) => (
                 <span
                   key={g}
-                  className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-white/15 text-white/85 ring-1 ring-white/10"
+                  className="whitespace-nowrap text-[10px] font-semibold px-2.5 py-1 rounded-full bg-white/15 text-white/85 ring-1 ring-white/10"
                 >
                   {g}
                 </span>
@@ -295,7 +295,7 @@ function SwipeCard({
                 {card.language}
               </span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-[-0.05em] text-white leading-[0.95] mb-2">
+            <h2 className="text-xl sm:text-2xl font-black tracking-[-0.04em] text-white leading-tight mb-1.5 line-clamp-2">
               {card.title}
             </h2>
             <div className="flex items-center gap-2 text-xs text-white/65 mb-3">

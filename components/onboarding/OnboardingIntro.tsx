@@ -161,7 +161,7 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
       </div>
 
       {/* Skip button */}
-      <button onClick={onDone} className="absolute bottom-7 right-6 z-20 flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-5 py-2 text-sm font-medium text-white/45 hover:text-white/75 hover:bg-white/[0.08] transition-colors">
+      <button onClick={onDone} className="absolute bottom-[calc(1.75rem+env(safe-area-inset-bottom))] right-6 z-20 flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-5 py-2 text-sm font-medium text-white/45 hover:text-white/75 hover:bg-white/[0.08] transition-colors">
         Skip
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
       </button>
@@ -217,7 +217,7 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
           )}
           {phase === 5 && (
             <motion.div key="cta" initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.55, ease: "easeOut" }} className="text-center flex flex-col items-center gap-6">
-              <p className="text-3xl font-black text-white tracking-tight">Ready to find your reel?</p>
+              <p className="text-2xl sm:text-3xl font-black text-white tracking-tight">Ready to find your reel?</p>
               <button onClick={onDone} className="rounded-full bg-[var(--color-cindr)] px-10 py-4 text-lg font-semibold text-white shadow-[0_0_40px_rgba(216,90,48,0.5)] hover:bg-[var(--color-cindr-hover)] transition-all hover:scale-105 active:scale-[0.97]">
                 Set your taste →
               </button>
@@ -232,7 +232,7 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
             <motion.div
               animate={cardControls}
               initial={{ y: 80, opacity: 0, x: 0, rotate: 0, scale: 1 }}
-              className="relative w-72 h-[432px] sm:w-80 sm:h-[480px] rounded-[2rem] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.7)]"
+              className="relative w-[min(18rem,82vw)] h-[min(432px,72dvh)] sm:w-80 sm:h-[480px] rounded-[2rem] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.7)]"
             >
               <Image src={posterUrl(card.poster) ?? ""} alt={card.title} fill sizes="320px" className="object-cover" priority />
               <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/25 to-transparent" />
@@ -322,7 +322,7 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
               {(phase === 1 || phase === 2 || phase === 3) && !trailerOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.3 }}
-                  className="absolute -bottom-14 left-0 right-0 flex items-center justify-center gap-4"
+                  className="absolute -bottom-14 left-0 right-0 flex items-center justify-center gap-3 sm:gap-4"
                 >
                   {/* Skip */}
                   <motion.div

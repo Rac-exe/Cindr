@@ -245,7 +245,7 @@ export default function WatchlistPage() {
             <button
               key={t.key}
               onClick={() => handleTabChange(t.key)}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 whitespace-nowrap py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                 tab === t.key
                   ? "bg-[var(--color-cindr)] text-white"
                   : "text-[var(--muted)] hover:text-[var(--foreground)]"

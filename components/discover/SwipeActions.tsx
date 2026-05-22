@@ -71,9 +71,7 @@ export default function SwipeActions({ onSkip, onLike, onOpenTrailer, dragDirect
           </span>
           <span className="text-[11px] font-semibold tracking-wide text-[var(--color-cindr)]">Trailer</span>
         </button>
-      ) : (
-        <div className="h-12 w-[6.5rem]" />
-      )}
+      ) : null}
 
       {/* Like */}
       <button
