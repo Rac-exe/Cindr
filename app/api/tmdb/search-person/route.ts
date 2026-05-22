@@ -3,16 +3,29 @@ import { searchPeople } from "@/lib/tmdb/client";
 
 export async function GET(request: NextRequest) {
   try {
-    const query = request.nextUrl.searchParams.get("query")?.trim() ?? "";
+    const query =
+      request.nextUrl.searchParams.get("query")?.trim().replace(/\s+/g, " ") ??
+      "";
+    const role = request.nextUrl.searchParams.get("role");
+    const preferredDepartment =
+      role === "director" ? "Directing" : role === "actor" ? "Acting" : null;
 
     if (query.length < 2) {
       return NextResponse.json({ results: [] });
     }
 
-    const data = await searchPeople(query);
-    const results = data.results.slice(0, 8).map((person) => ({
+    const data = await searchPeople(query.slice(0, 80));
+    const sortedResults = preferredDepartment
+      ? [...data.results].sort((a, b) => {
+          const aMatches = a.known_for_department === preferredDepartment;
+          const bMatches = b.known_for_department === preferredDepartment;
+          return Number(bMatches) - Number(aMatches);
+        })
+      : data.results;
+    const results = sortedResults.slice(0, 8).map((person) => ({
       id: person.id,
       name: person.name,
+      department: person.known_for_department,
       knownFor: person.known_for
         ?.map((item) => item.title ?? item.name)
         .filter(Boolean)

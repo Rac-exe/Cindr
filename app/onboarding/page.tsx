@@ -27,6 +27,7 @@ type PreferenceView = "quiz" | "advanced";
 type PersonSearchResult = {
   id: number;
   name: string;
+  department?: string;
   knownFor?: string;
 };
 
@@ -73,10 +74,6 @@ function OnboardingContent() {
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
   const [selectedPeople, setSelectedPeople] = useState<PreferencePerson[]>([]);
-  const [personRole, setPersonRole] = useState<PreferencePersonRole>("actor");
-  const [personQuery, setPersonQuery] = useState("");
-  const [personResults, setPersonResults] = useState<PersonSearchResult[]>([]);
-  const [personSearching, setPersonSearching] = useState(false);
 
   const dynamicQuestions = useMemo(
     () => getQuestionsForTypes(selectedTypes),
@@ -133,37 +130,6 @@ function OnboardingContent() {
     })();
   }, []);
 
-  useEffect(() => {
-    const query = personQuery.trim();
-    if (query.length < 2) {
-      return;
-    }
-
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      setPersonSearching(true);
-      try {
-        const params = new URLSearchParams({ query });
-        const res = await fetch(`/api/tmdb/search-person?${params.toString()}`, {
-          signal: controller.signal,
-        });
-        const data = (await res.json()) as { results?: PersonSearchResult[] };
-        setPersonResults(data.results ?? []);
-      } catch (error) {
-        if ((error as Error).name !== "AbortError") {
-          setPersonResults([]);
-        }
-      } finally {
-        setPersonSearching(false);
-      }
-    }, 250);
-
-    return () => {
-      controller.abort();
-      window.clearTimeout(timer);
-    };
-  }, [personQuery]);
-
   const mainProgress =
     step === "languages"
       ? selectedLangs.length > 0 ? 1 : 0
@@ -215,24 +181,14 @@ function OnboardingContent() {
     return Math.max(1870, Math.min(2100, Math.round(parsed)));
   }
 
-  function addPerson(person: PersonSearchResult) {
+  function addPerson(person: PersonSearchResult, role: PreferencePersonRole) {
     setSelectedPeople((prev) => {
-      if (prev.some((item) => item.id === person.id && item.role === personRole)) {
+      if (prev.some((item) => item.id === person.id && item.role === role)) {
         return prev;
       }
       if (prev.length >= 5) return prev;
-      return [...prev, { id: person.id, name: person.name, role: personRole }];
+      return [...prev, { id: person.id, name: person.name, role }];
     });
-    setPersonQuery("");
-    setPersonResults([]);
-  }
-
-  function handlePersonQueryChange(value: string) {
-    setPersonQuery(value);
-    if (value.trim().length < 2) {
-      setPersonResults([]);
-      setPersonSearching(false);
-    }
   }
 
   function removePerson(person: PreferencePerson) {
@@ -283,10 +239,11 @@ function OnboardingContent() {
     const prefs = buildPrefs(allMoods);
 
     savePreferences(prefs);
+    markOnboardingComplete();
 
     const userId = await getCurrentUserId();
     if (userId) {
-      await upsertPreferences(prefs);
+      await upsertPreferences({ ...prefs, onboardingComplete: true });
     }
 
     router.push("/discover");
@@ -429,58 +386,20 @@ function OnboardingContent() {
                 <label className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
                   People
                 </label>
-                <div className="grid grid-cols-2 rounded-full border border-white/10 bg-black/20 p-0.5">
-                  {(["actor", "director"] as PreferencePersonRole[]).map((role) => (
-                    <button
-                      type="button"
-                      key={role}
-                      onClick={() => setPersonRole(role)}
-                      className={`rounded-full px-2.5 py-1 text-[10px] font-semibold capitalize transition-colors ${
-                        personRole === role
-                          ? "bg-[var(--color-cindr)] text-white"
-                          : "text-[var(--muted)] hover:text-white"
-                      }`}
-                    >
-                      {role}
-                    </button>
-                  ))}
-                </div>
+                <span className="text-[10px] text-[var(--muted)]">Optional</span>
               </div>
-              <input
-                type="search"
-                value={personQuery}
-                onChange={(event) => handlePersonQueryChange(event.target.value)}
-                placeholder={`Search ${personRole}s`}
-                className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-[var(--muted)] focus:border-[var(--color-cindr)]"
-              />
-              {(personSearching || personResults.length > 0) && (
-                <div className="mt-2 max-h-44 overflow-y-auto rounded-xl border border-white/10 bg-black/25 p-1.5">
-                  {personSearching ? (
-                    <p className="px-2 py-2 text-xs text-[var(--muted)]">Searching...</p>
-                  ) : (
-                    personResults.slice(0, 6).map((person) => (
-                      <button
-                        type="button"
-                        key={person.id}
-                        onClick={() => addPerson(person)}
-                        className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left transition-colors hover:bg-white/10"
-                      >
-                        <span>
-                          <span className="block text-sm font-medium">{person.name}</span>
-                          {person.knownFor && (
-                            <span className="line-clamp-1 text-xs text-[var(--muted)]">
-                              {person.knownFor}
-                            </span>
-                          )}
-                        </span>
-                        <span className="text-xs capitalize text-[var(--color-cindr)]">
-                          {personRole}
-                        </span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
+              <div className="grid gap-2.5">
+                <PersonSearchField
+                  role="actor"
+                  selectedCount={selectedPeople.length}
+                  onAdd={addPerson}
+                />
+                <PersonSearchField
+                  role="director"
+                  selectedCount={selectedPeople.length}
+                  onAdd={addPerson}
+                />
+              </div>
               {selectedPeople.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {selectedPeople.map((person) => (
@@ -602,6 +521,108 @@ function OnboardingContent() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function PersonSearchField({
+  role,
+  selectedCount,
+  onAdd,
+}: {
+  role: PreferencePersonRole;
+  selectedCount: number;
+  onAdd: (person: PersonSearchResult, role: PreferencePersonRole) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<PersonSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length < 2) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const params = new URLSearchParams({ query: trimmedQuery, role });
+        const res = await fetch(`/api/tmdb/search-person?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        const data = (await res.json()) as { results?: PersonSearchResult[] };
+        setResults(data.results ?? []);
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
+          setResults([]);
+        }
+      } finally {
+        setSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [query, role]);
+
+  function handleAdd(person: PersonSearchResult) {
+    onAdd(person, role);
+    setQuery("");
+    setResults([]);
+  }
+
+  function handleQueryChange(value: string) {
+    setQuery(value);
+    if (value.trim().length < 2) {
+      setResults([]);
+      setSearching(false);
+    }
+  }
+
+  return (
+    <div>
+      <input
+        type="search"
+        value={query}
+        onChange={(event) => handleQueryChange(event.target.value)}
+        placeholder={role === "actor" ? "Search actors" : "Search directors"}
+        className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-[var(--muted)] focus:border-[var(--color-cindr)]"
+      />
+      {(searching || results.length > 0) && (
+        <div className="mt-2 max-h-44 overflow-y-auto rounded-xl border border-white/10 bg-black/25 p-1.5">
+          {searching ? (
+            <p className="px-2 py-2 text-xs text-[var(--muted)]">Searching...</p>
+          ) : (
+            results.slice(0, 6).map((person) => (
+              <button
+                type="button"
+                key={person.id}
+                onClick={() => handleAdd(person)}
+                disabled={selectedCount >= 5}
+                className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <span>
+                  <span className="block text-sm font-medium">{person.name}</span>
+                  {person.knownFor && (
+                    <span className="line-clamp-1 text-xs text-[var(--muted)]">
+                      {person.department
+                        ? `${person.department} · ${person.knownFor}`
+                        : person.knownFor}
+                    </span>
+                  )}
+                </span>
+                <span className="text-xs capitalize text-[var(--color-cindr)]">
+                  {role}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

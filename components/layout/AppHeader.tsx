@@ -30,6 +30,7 @@ export default function AppHeader() {
   const [isSignedIn, setIsSignedIn] = useState(false);
   const prefsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+  const mobileProfileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -47,13 +48,14 @@ export default function AppHeader() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
       if (prefsRef.current && !prefsRef.current.contains(event.target as Node)) {
         setPrefsOpen(false);
       }
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(event.target as Node)
-      ) {
+      const insideProfile =
+        Boolean(profileRef.current?.contains(target)) ||
+        Boolean(mobileProfileRef.current?.contains(target));
+      if (!insideProfile) {
         setProfileOpen(false);
       }
     }
@@ -94,7 +96,7 @@ export default function AppHeader() {
         </Link>
 
         {!isLanding && (
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav className="hidden items-center gap-1 lg:flex">
           <NavLink
             href="/discover"
             label="Discover"
@@ -222,6 +224,98 @@ export default function AppHeader() {
             )}
           </div>
           </nav>
+        )}
+        {!isLanding && (
+          <div ref={mobileProfileRef} className="relative flex items-center gap-2 lg:hidden">
+            {!isSignedIn && (
+              <>
+                <Link
+                  href="/auth/login"
+                  className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white"
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/auth/signup"
+                  className="rounded-full bg-[var(--color-cindr)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-cindr-hover)]"
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => setProfileOpen((current) => !current)}
+              className={`grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-sm transition-colors ${
+                pathname.startsWith("/profile")
+                  ? "text-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
+                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
+              }`}
+              aria-label="Open profile menu"
+              aria-expanded={profileOpen}
+              aria-haspopup="menu"
+            >
+              <UserCircle
+                size={23}
+                weight={pathname.startsWith("/profile") ? "fill" : "regular"}
+              />
+            </button>
+            {profileOpen && (
+              <div className="absolute right-0 top-[3rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                <Link
+                  href="/profile"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <UserCircle size={18} />
+                  Profile
+                </Link>
+                <Link
+                  href="/about"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <Info size={18} />
+                  About Cindr
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => openFeedbackModal("feedback")}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <ChatCircleText size={18} />
+                  Feedback / report issue
+                </button>
+                {isSignedIn ? (
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
+                  >
+                    <SignOut size={18} />
+                    Sign out
+                  </button>
+                ) : (
+                  <div className="mt-1 grid grid-cols-2 gap-2 border-t border-white/10 pt-2">
+                    <Link
+                      href="/auth/login"
+                      onClick={() => setProfileOpen(false)}
+                      className="rounded-xl border border-white/10 px-3 py-2.5 text-center text-sm font-medium text-white/75"
+                    >
+                      Log in
+                    </Link>
+                    <Link
+                      href="/auth/signup"
+                      onClick={() => setProfileOpen(false)}
+                      className="rounded-xl bg-[var(--color-cindr)] px-3 py-2.5 text-center text-sm font-semibold text-white"
+                    >
+                      Sign up
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </header>
       {feedbackOpen && (
