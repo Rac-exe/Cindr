@@ -3,15 +3,30 @@
 interface SwipeActionsProps {
   onSkip: () => void;
   onLike: () => void;
+  onOpenTrailer?: () => void;
   dragDirection?: "left" | "right" | null;
 }
 
-export default function SwipeActions({ onSkip, onLike, dragDirection }: SwipeActionsProps) {
+export default function SwipeActions({ onSkip, onLike, onOpenTrailer, dragDirection }: SwipeActionsProps) {
   const skipActive = dragDirection === "left";
   const likeActive = dragDirection === "right";
 
   return (
-    <div className="absolute -bottom-[4.5rem] left-0 right-0 z-20 flex items-center justify-center gap-5 sm:-bottom-20 sm:gap-6">
+    <div className="absolute -bottom-[4.5rem] left-0 right-0 z-20 flex flex-col items-center gap-2 sm:-bottom-[5.5rem]">
+      {/* Trailer button — center, above skip/like */}
+      {onOpenTrailer && (
+        <button
+          onClick={onOpenTrailer}
+          className="flex items-center gap-1.5 rounded-full border border-white/15 bg-[#111015]/80 px-4 py-1.5 text-[11px] font-semibold text-white/55 backdrop-blur-md transition-all hover:border-white/30 hover:text-white/85 hover:bg-white/[0.08]"
+          aria-label="Watch trailer"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 19V5M5 12l7-7 7 7" />
+          </svg>
+          Trailer
+        </button>
+      )}
+      <div className="flex items-center gap-5 sm:gap-6">
       <button
         onClick={onSkip}
         style={{
@@ -77,6 +92,7 @@ export default function SwipeActions({ onSkip, onLike, dragDirection }: SwipeAct
           />
         </svg>
       </button>
+      </div>
     </div>
   );
 }

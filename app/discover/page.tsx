@@ -556,12 +556,6 @@ export default function DiscoverPage() {
     }
     if (direction === "right" && card) {
       const mediaType = card.media_type ?? "movie";
-      openTrailerDialog({
-        id,
-        mediaType,
-        preview: card,
-        initialInteraction: { liked: true },
-      });
       void (async () => {
         const userId = await getCurrentUserId();
         if (!userId) {
@@ -582,6 +576,16 @@ export default function DiscoverPage() {
         });
       })();
     }
+  }
+
+  function openCurrentTrailer() {
+    const topCard = cards[0];
+    if (!topCard || selectedMovie) return;
+    openTrailerDialog({
+      id: topCard.id,
+      mediaType: topCard.media_type ?? "movie",
+      preview: topCard,
+    });
   }
 
   function handleSwipe(id: number) {
@@ -694,6 +698,9 @@ export default function DiscoverPage() {
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
         requestKeyboardSwipe("right");
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        openCurrentTrailer();
       }
     }
 
@@ -724,6 +731,7 @@ export default function DiscoverPage() {
                 onSwipeStart={handleSwipeStart}
                 onSwipe={handleSwipe}
                 swipeRequest={swipeRequest}
+                onOpenTrailer={openCurrentTrailer}
               />
             </motion.div>
           ) : (

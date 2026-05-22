@@ -14,6 +14,7 @@ import {
 } from "@/lib/supabase/core";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 import AppHeader from "@/components/layout/AppHeader";
+import OnboardingIntro from "@/components/onboarding/OnboardingIntro";
 import type {
   EraPreference,
   PreferencePerson,
@@ -67,6 +68,7 @@ function OnboardingContent() {
       ? Math.max(0, Math.round(queryIndex))
       : 0;
 
+  const [introReady, setIntroReady] = useState<boolean | null>(null); // null=checking
   const [selectedLangs, setSelectedLangs] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
@@ -95,6 +97,12 @@ function OnboardingContent() {
 
   useEffect(() => {
     (async () => {
+      const userId = await getCurrentUserId();
+      const seen = typeof window !== "undefined" &&
+        localStorage.getItem("cindr_intro_seen") === "1";
+      // Logged-in users and guests who've already seen it skip the intro
+      setIntroReady(userId !== null || seen);
+
       const { preferences } = await getEffectivePreferences();
       setSelectedLangs(preferences.languages);
       setSelectedTypes(preferences.contentTypes);
@@ -306,6 +314,18 @@ function OnboardingContent() {
       : step === "content_type"
       ? selectedTypes.length > 0
       : (answers[dynamicQuestions[currentQIndex]?.id]?.length ?? 0) > 0;
+
+  // Show intro for first-time guests
+  if (introReady === false) {
+    return (
+      <OnboardingIntro
+        onDone={() => {
+          localStorage.setItem("cindr_intro_seen", "1");
+          setIntroReady(true);
+        }}
+      />
+    );
+  }
 
   if (view === "advanced") {
     return (

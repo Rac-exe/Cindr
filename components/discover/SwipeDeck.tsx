@@ -13,6 +13,7 @@ interface SwipeDeckProps {
   onSwipeStart?: (id: number, direction: "left" | "right") => void;
   onSwipe: (id: number, direction: "left" | "right") => void;
   swipeRequest?: { direction: "left" | "right"; nonce: number; cardId: number };
+  onOpenTrailer?: () => void;
 }
 
 export default function SwipeDeck({
@@ -20,6 +21,7 @@ export default function SwipeDeck({
   onSwipeStart,
   onSwipe,
   swipeRequest,
+  onOpenTrailer,
 }: SwipeDeckProps) {
   const visibleCards = cards.slice(0, 3);
   const [actionRequest, setActionRequest] = useState<{
@@ -51,12 +53,14 @@ export default function SwipeDeck({
           isTop={i === 0}
           swipeRequest={i === 0 ? activeRequest : undefined}
           onDragChange={i === 0 ? setDragDirection : undefined}
+          onOpenTrailer={i === 0 ? onOpenTrailer : undefined}
         />
       ))}
       {visibleCards.length > 0 && (
         <SwipeActions
           onSkip={() => requestSwipe("left")}
           onLike={() => requestSwipe("right")}
+          onOpenTrailer={onOpenTrailer}
           dragDirection={dragDirection}
         />
       )}
@@ -72,6 +76,7 @@ function SwipeCard({
   isTop,
   swipeRequest,
   onDragChange,
+  onOpenTrailer,
 }: {
   card: MovieCardData;
   index: number;
@@ -80,13 +85,16 @@ function SwipeCard({
   isTop: boolean;
   swipeRequest?: { direction: "left" | "right"; nonce: number; cardId: number };
   onDragChange?: (dir: "left" | "right" | null) => void;
+  onOpenTrailer?: () => void;
 }) {
   const [exitingDirection, setExitingDirection] = useState<"left" | "right" | null>(null);
   const handledNonce = useRef<number | null>(null);
   const x = useMotionValue(0);
+  const y = useMotionValue(0);
   const rotate = useTransform(x, [-220, 220], [-14, 14]);
   const leftOpacity = useTransform(x, [-100, -20], [1, 0]);
   const rightOpacity = useTransform(x, [20, 100], [0, 1]);
+  const upOpacity = useTransform(y, [-80, -20], [1, 0]);
   const borderOpacity = useTransform(x, [-180, 0, 180], [0.9, 0.45, 0.9]);
   const accentX = useTransform(x, [-180, 180], ["-22%", "22%"]);
 
@@ -106,9 +114,17 @@ function SwipeCard({
   }
 
   function handleDragEnd(_: unknown, info: PanInfo) {
-    const offset = info.offset.x;
-    if (Math.abs(offset) > SWIPE_THRESHOLD) {
-      const direction = offset > 0 ? "right" : "left";
+    const ox = info.offset.x;
+    const oy = info.offset.y;
+    // Upward swipe: primarily vertical and going up
+    if (oy < -80 && Math.abs(oy) > Math.abs(ox)) {
+      onDragChange?.(null);
+      onOpenTrailer?.();
+      return;
+    }
+    // Horizontal swipe
+    if (Math.abs(ox) > SWIPE_THRESHOLD) {
+      const direction = ox > 0 ? "right" : "left";
       exitCard(direction);
     } else {
       onDragChange?.(null);
@@ -155,11 +171,12 @@ function SwipeCard({
       className={`absolute inset-0 touch-none ${isTop ? "will-change-transform" : ""}`}
       style={{
         x: isTop ? x : 0,
+        y: isTop ? y : 0,
         rotate: isTop ? rotate : 0,
         zIndex: 10 - index,
       }}
-      drag={isTop ? "x" : false}
-      dragConstraints={{ left: 0, right: 0 }}
+      drag={isTop ? true : false}
+      dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.9}
       onDragEnd={isTop ? handleDragEnd : undefined}
       initial={
@@ -225,7 +242,13 @@ function SwipeCard({
                 className="absolute right-6 top-6 rounded-2xl border-2 border-[var(--color-cindr)] bg-black/35 px-4 py-2 text-lg font-black text-[var(--color-cindr)] shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-md rotate-12"
                 style={{ opacity: rightOpacity }}
               >
-                WATCH
+                LIKE
+              </motion.div>
+              <motion.div
+                className="absolute bottom-36 left-1/2 -translate-x-1/2 rounded-2xl border-2 border-white/60 bg-black/35 px-4 py-2 text-lg font-black text-white shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-md"
+                style={{ opacity: upOpacity }}
+              >
+                TRAILER ↑
               </motion.div>
             </>
           )}
