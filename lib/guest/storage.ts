@@ -22,6 +22,7 @@ const DEFAULT_STATE: GuestState = {
   preferencesUpdatedAt: null,
   onboardingComplete: false,
   swipedIds: [],
+  likedIds: [],
   pendingInteractions: [],
 };
 
@@ -81,6 +82,18 @@ export function removeSwipedId(id: number): void {
 
 export function clearSwipedIds(): void {
   saveGuestState({ swipedIds: [] });
+  // likedIds intentionally NOT cleared — liked movies must never re-appear
+}
+
+export function addLikedId(id: number): void {
+  const current = getGuestState();
+  if (!current.likedIds.includes(id)) {
+    saveGuestState({ likedIds: [...current.likedIds, id] });
+  }
+}
+
+export function getLikedIds(): number[] {
+  return getGuestState().likedIds;
 }
 
 export function queuePendingInteraction(interaction: PendingGuestInteraction): void {

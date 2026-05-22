@@ -17,12 +17,11 @@ import type { MovieCardData } from "@/types/movie";
 import { posterUrl } from "@/types/movie";
 import { Check, Trash } from "@phosphor-icons/react";
 
-type WatchlistTab = "liked" | "watchlisted" | "favourite" | "watched";
+type WatchlistTab = "liked" | "favourite" | "watched";
 type WatchlistTabPatch = Partial<Pick<SavedMovie, WatchlistTab>>;
 
 const TABS: { key: WatchlistTab; label: string }[] = [
   { key: "liked", label: "Liked" },
-  { key: "watchlisted", label: "Watchlist" },
   { key: "favourite", label: "Favourite" },
   { key: "watched", label: "Watched" },
 ];

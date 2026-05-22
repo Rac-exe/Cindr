@@ -37,6 +37,8 @@ export interface GuestState {
   preferencesUpdatedAt: string | null;
   onboardingComplete: boolean;
   swipedIds: number[];
+  /** Permanently liked movie IDs — never cleared, so liked movies never re-appear */
+  likedIds: number[];
   pendingInteractions: PendingGuestInteraction[];
 }
 
