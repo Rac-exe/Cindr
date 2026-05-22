@@ -35,20 +35,35 @@ export default function SwipeActions({ onSkip, onLike, onOpenTrailer, dragDirect
         </svg>
       </button>
 
-      {/* Trailer — center */}
+      {/* Trailer — center pill */}
       {onOpenTrailer ? (
         <button
           onClick={onOpenTrailer}
-          className="flex h-11 w-11 flex-col items-center justify-center gap-0.5 rounded-full border border-white/15 bg-[#111015]/80 text-white/55 backdrop-blur-md transition-all hover:border-white/30 hover:bg-white/[0.08] hover:text-white/85"
+          style={{
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.08) inset, 0 12px 32px rgba(0,0,0,0.4)",
+            transition: "box-shadow 0.2s ease, background 0.2s ease, transform 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.boxShadow =
+              "0 0 0 1px rgba(255,255,255,0.18) inset, 0 0 22px rgba(216,90,48,0.22), 0 12px 32px rgba(0,0,0,0.4)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.boxShadow =
+              "0 0 0 1px rgba(255,255,255,0.08) inset, 0 12px 32px rgba(0,0,0,0.4)";
+          }}
+          className="flex h-12 items-center gap-2 rounded-full bg-white/[0.06] px-5 backdrop-blur-md hover:scale-105 active:scale-[0.96]"
           aria-label="Watch trailer"
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 19V5M5 12l7-7 7 7" />
-          </svg>
-          <span className="text-[8px] font-semibold uppercase tracking-wide leading-none">Trailer</span>
+          {/* Play triangle */}
+          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/10">
+            <svg width="9" height="10" viewBox="0 0 9 10" fill="currentColor" className="translate-x-[1px] text-white/80">
+              <path d="M8.5 5L0.5 0.669873V9.33013L8.5 5Z" />
+            </svg>
+          </span>
+          <span className="text-[11px] font-semibold tracking-wide text-white/65">Trailer</span>
         </button>
       ) : (
-        <div className="h-11 w-11" />
+        <div className="h-12 w-[6.5rem]" />
       )}
 
       {/* Like */}
