@@ -9,6 +9,8 @@ import {
   removeSwipedId,
   queuePendingInteraction,
   savePreferences,
+  addLikedId,
+  getLikedIds,
 } from "@/lib/guest/storage";
 import {
   getCurrentUserId,
@@ -16,6 +18,7 @@ import {
   likeMovie,
   patchMovieInteraction,
   upsertPreferences,
+  getLikedTmdbIds,
 } from "@/lib/supabase/core";
 import type { Movie, MovieCardData } from "@/types/movie";
 import { posterUrl } from "@/types/movie";
@@ -26,6 +29,16 @@ import AppHeader from "@/components/layout/AppHeader";
 import MobileNav from "@/components/layout/MobileNav";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 import { prewarmTrailers } from "@/lib/client/trailerCache";
+import {
+  loadTasteProfile,
+  saveTasteProfile,
+  updateTasteProfile,
+  topGenreIds,
+  dislikedGenreIds,
+  explorationGenreId,
+  hasSignal,
+  type TasteProfile,
+} from "@/lib/recommendations/tasteProfile";
 
 const GENRE_MAP: Record<number, string> = {
   28: "Action",
@@ -233,6 +246,9 @@ export default function DiscoverPage() {
     direction: "left" | "right";
   } | null>(null);
   const emptyRetryCount = useRef(0);
+  const tasteProfileRef = useRef<TasteProfile>(loadTasteProfile());
+  const fetchCountRef = useRef(0);
+  const likedIdsRef = useRef<Set<number>>(new Set(getLikedIds()));
   const [swipeRequest, setSwipeRequest] = useState<{
     direction: "left" | "right";
     nonce: number;
@@ -293,6 +309,20 @@ export default function DiscoverPage() {
       }
       params.set("page", String(pageNum));
 
+      // Inject taste profile signals when in taste mode and we have enough data
+      if (mode === "taste") {
+        const profile = tasteProfileRef.current;
+        if (hasSignal(profile)) {
+          fetchCountRef.current += 1;
+          const exploreId = explorationGenreId(profile, fetchCountRef.current);
+          const learnedIds = exploreId ? [exploreId] : topGenreIds(profile, 3);
+          const excludeIds = dislikedGenreIds(profile);
+          if (learnedIds.length > 0) params.set("learnedGenres", learnedIds.join(","));
+          if (excludeIds.length > 0) params.set("excludeGenres", excludeIds.join(","));
+          if (profile.voteFloor > 4.5) params.set("voteFloor", profile.voteFloor.toFixed(1));
+        }
+      }
+
       const res = await fetch(`/api/tmdb/discover?${params.toString()}`, {
         signal,
       });
@@ -300,8 +330,9 @@ export default function DiscoverPage() {
 
       if (data.results) {
         const swiped = new Set(ignoreSwiped ? [] : guest.swipedIds);
+        const liked = likedIdsRef.current;
         const newCards = (data.results as Movie[])
-          .filter((m) => !swiped.has(m.id) && m.poster_path)
+          .filter((m) => !swiped.has(m.id) && !liked.has(m.id) && m.poster_path)
           .map(toCardData);
         return newCards;
       }
@@ -372,8 +403,16 @@ export default function DiscoverPage() {
     let cancelled = false;
 
     (async () => {
-      const { preferences: effectivePreferences } = await getEffectivePreferences();
+      // Load preferences + liked IDs in parallel
+      const [{ preferences: effectivePreferences }, remoteIds] = await Promise.all([
+        getEffectivePreferences(),
+        getLikedTmdbIds(),
+      ]);
       if (cancelled) return;
+      // Merge remote liked IDs into the local set so they're excluded from the feed
+      if (remoteIds.length > 0) {
+        remoteIds.forEach((id) => likedIdsRef.current.add(id));
+      }
       setPreferences({
         ...DEFAULT_DISCOVER_PREFERENCES,
         ...effectivePreferences,
@@ -554,7 +593,60 @@ export default function DiscoverPage() {
     if (card) {
       setLastSwipe({ card, direction });
     }
+
+    // Update taste profile on every swipe (like or skip)
+    const updatedProfile = updateTasteProfile(
+      tasteProfileRef.current,
+      {
+        genres: card?.genres ?? [],
+        language: card?.language ?? "en",
+        rating: card?.rating ?? 0,
+        id,
+        mediaType: card?.media_type ?? "movie",
+        title: card?.title ?? "",
+      },
+      direction === "right"
+    );
+    tasteProfileRef.current = updatedProfile;
+    saveTasteProfile(updatedProfile);
+
+    // Every 3rd like, inject TMDB recommendations — taste mode only
+    if (direction === "right" && preferences.discoverMode === "taste" && updatedProfile.likeCount % 3 === 0 && updatedProfile.likeCount > 0) {
+      const lastLiked = updatedProfile.recentLiked[0];
+      if (lastLiked) {
+        void (async () => {
+          try {
+            const res = await fetch(`/api/tmdb/similar?id=${lastLiked.id}&type=${lastLiked.mediaType}`);
+            const data = await res.json();
+            if (data.results?.length > 0) {
+              const guest = getGuestState();
+              const swiped = new Set(guest.swipedIds);
+              const injected = (data.results as Movie[])
+                .filter((m) => !swiped.has(m.id) && !likedIdsRef.current.has(m.id) && m.poster_path)
+                .map((m) => ({ ...toCardData(m), becauseOf: lastLiked.title }))
+                .slice(0, 3);
+              if (injected.length > 0) {
+                setCards((prev) => {
+                  const existingIds = new Set(prev.map((c) => c.id));
+                  const fresh = injected.filter((c) => !existingIds.has(c.id));
+                  if (fresh.length === 0) return prev;
+                  // Insert at position 4 so current card isn't disrupted
+                  const insertAt = Math.min(4, prev.length);
+                  return [...prev.slice(0, insertAt), ...fresh, ...prev.slice(insertAt)];
+                });
+              }
+            }
+          } catch {
+            // non-critical — silent fail
+          }
+        })();
+      }
+    }
+
     if (direction === "right" && card) {
+      // Permanently mark as liked so it never reappears in the feed
+      likedIdsRef.current.add(id);
+      addLikedId(id);
       const mediaType = card.media_type ?? "movie";
       void (async () => {
         const userId = await getCurrentUserId();
@@ -732,6 +824,8 @@ export default function DiscoverPage() {
                 onSwipe={handleSwipe}
                 swipeRequest={swipeRequest}
                 onOpenTrailer={openCurrentTrailer}
+                trailerOpen={!!selectedMovie}
+                discoverMode={preferences.discoverMode}
               />
             </motion.div>
           ) : (

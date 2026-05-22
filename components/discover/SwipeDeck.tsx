@@ -14,6 +14,8 @@ interface SwipeDeckProps {
   onSwipe: (id: number, direction: "left" | "right") => void;
   swipeRequest?: { direction: "left" | "right"; nonce: number; cardId: number };
   onOpenTrailer?: () => void;
+  trailerOpen?: boolean;
+  discoverMode?: string;
 }
 
 export default function SwipeDeck({
@@ -22,6 +24,8 @@ export default function SwipeDeck({
   onSwipe,
   swipeRequest,
   onOpenTrailer,
+  trailerOpen,
+  discoverMode,
 }: SwipeDeckProps) {
   const visibleCards = cards.slice(0, 3);
   const [actionRequest, setActionRequest] = useState<{
@@ -29,7 +33,7 @@ export default function SwipeDeck({
     nonce: number;
     cardId: number;
   } | null>(null);
-  const [dragDirection, setDragDirection] = useState<"left" | "right" | null>(null);
+  const [dragDirection, setDragDirection] = useState<"left" | "right" | "up" | null>(null);
   const actionNonce = useRef(0);
   const activeRequest = swipeRequest ?? actionRequest ?? undefined;
 
@@ -54,6 +58,7 @@ export default function SwipeDeck({
           swipeRequest={i === 0 ? activeRequest : undefined}
           onDragChange={i === 0 ? setDragDirection : undefined}
           onOpenTrailer={i === 0 ? onOpenTrailer : undefined}
+          showRecommendedChip={discoverMode === "taste"}
         />
       ))}
       {visibleCards.length > 0 && (
@@ -62,6 +67,7 @@ export default function SwipeDeck({
           onLike={() => requestSwipe("right")}
           onOpenTrailer={onOpenTrailer}
           dragDirection={dragDirection}
+          trailerOpen={trailerOpen}
         />
       )}
     </div>
@@ -77,6 +83,7 @@ function SwipeCard({
   swipeRequest,
   onDragChange,
   onOpenTrailer,
+  showRecommendedChip,
 }: {
   card: MovieCardData;
   index: number;
@@ -84,8 +91,9 @@ function SwipeCard({
   onSwipe: (id: number, direction: "left" | "right") => void;
   isTop: boolean;
   swipeRequest?: { direction: "left" | "right"; nonce: number; cardId: number };
-  onDragChange?: (dir: "left" | "right" | null) => void;
+  onDragChange?: (dir: "left" | "right" | "up" | null) => void;
   onOpenTrailer?: () => void;
+  showRecommendedChip?: boolean;
 }) {
   const [exitingDirection, setExitingDirection] = useState<"left" | "right" | null>(null);
   const handledNonce = useRef<number | null>(null);
@@ -100,9 +108,18 @@ function SwipeCard({
 
   useMotionValueEvent(x, "change", (v) => {
     if (!isTop) return;
+    const yv = y.get();
+    if (yv < -18 && Math.abs(yv) > Math.abs(v)) return; // upward drag dominates
     if (v < -18) onDragChange?.("left");
     else if (v > 18) onDragChange?.("right");
     else onDragChange?.(null);
+  });
+
+  useMotionValueEvent(y, "change", (v) => {
+    if (!isTop) return;
+    const xv = x.get();
+    if (v < -18 && Math.abs(v) > Math.abs(xv)) onDragChange?.("up");
+    else if (v >= -18 && Math.abs(xv) <= 18) onDragChange?.(null);
   });
 
   function exitCard(direction: "left" | "right") {
@@ -254,6 +271,16 @@ function SwipeCard({
           )}
 
           <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
+            {card.becauseOf && showRecommendedChip && (
+              <div className="mb-2.5 flex items-center">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-cindr)] px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-[0_2px_12px_rgba(216,90,48,0.5)]">
+                  <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor">
+                    <path d="M4 0L5 3H8L5.5 4.8L6.5 8L4 6.2L1.5 8L2.5 4.8L0 3H3L4 0Z"/>
+                  </svg>
+                  Recommended for you
+                </span>
+              </div>
+            )}
             <div className="mb-3 h-1 w-12 rounded-full bg-[var(--color-cindr)] shadow-[0_0_18px_rgba(216,90,48,0.5)]" />
             <div className="flex items-center gap-2 mb-3">
               {card.genres.slice(0, 2).map((g) => (

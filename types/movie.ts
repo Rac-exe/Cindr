@@ -72,6 +72,8 @@ export interface MovieCardData {
   language: string;
   runtime?: number;
   media_type?: "movie" | "tv";
+  /** Set on TMDB-recommendation-injected cards */
+  becauseOf?: string;
 }
 
 export const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
