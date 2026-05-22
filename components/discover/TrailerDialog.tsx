@@ -13,6 +13,7 @@ import {
   patchMovieInteraction,
   rateMovie,
 } from "@/lib/supabase/core";
+import { queuePendingInteraction } from "@/lib/guest/storage";
 import {
   fetchMovieDetailsCached,
   fetchTrailerCached,
@@ -156,7 +157,14 @@ export default function TrailerDialog({
   async function handleRating(nextRating: number) {
     const userId = await getCurrentUserId();
     if (!userId) {
-      router.push("/auth/signup");
+      queuePendingInteraction({
+        tmdb_id: movieId,
+        media_type: mediaType,
+        title: displayTitle,
+        poster_path: displayPosterPath,
+        patch: { rating: nextRating },
+      });
+      router.push("/auth/signup?returnTo=/discover");
       return;
     }
     if (!displayTitle) return;
@@ -182,7 +190,17 @@ export default function TrailerDialog({
   ) {
     const userId = await getCurrentUserId();
     if (!userId) {
-      router.push("/auth/signup");
+      queuePendingInteraction({
+        tmdb_id: movieId,
+        media_type: mediaType,
+        title: displayTitle,
+        poster_path: displayPosterPath,
+        patch,
+      });
+      setOptimisticInteraction({ ...(activeInteraction ?? {}), ...patch });
+      router.push(
+        patch.watchlisted ? "/auth/signup?returnTo=/watchlist" : "/auth/signup?returnTo=/discover"
+      );
       return;
     }
     setSaving(true);

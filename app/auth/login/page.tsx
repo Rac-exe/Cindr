@@ -8,6 +8,12 @@ import { syncGuestToAccount, getDbPreferences } from "@/lib/supabase/core";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 import AppHeader from "@/components/layout/AppHeader";
 
+function getReturnTo(): string | null {
+  if (typeof window === "undefined") return null;
+  const value = new URLSearchParams(window.location.search).get("returnTo");
+  return value?.startsWith("/") && !value.startsWith("//") ? value : null;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -18,7 +24,7 @@ export default function LoginPage() {
   useEffect(() => {
     let mounted = true;
     supabase.auth.getUser().then(({ data }) => {
-      if (mounted && data.user) router.replace("/discover");
+      if (mounted && data.user) router.replace(getReturnTo() ?? "/discover");
     });
     return () => {
       mounted = false;
@@ -41,7 +47,8 @@ export default function LoginPage() {
         await syncGuestToAccount();
         const prefs = await getDbPreferences();
         router.push(
-          prefs?.onboarding_complete ? "/discover" : "/onboarding?mode=quiz"
+          getReturnTo() ??
+            (prefs?.onboarding_complete ? "/discover" : "/onboarding?mode=quiz")
         );
       }
     } catch {

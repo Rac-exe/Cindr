@@ -7,6 +7,7 @@ import {
   addSwipedId,
   clearSwipedIds,
   removeSwipedId,
+  queuePendingInteraction,
   savePreferences,
 } from "@/lib/guest/storage";
 import {
@@ -504,18 +505,32 @@ export default function DiscoverPage() {
       setLastSwipe({ card, direction });
     }
     if (direction === "right" && card) {
+      const mediaType = card.media_type ?? "movie";
       openTrailerDialog({
         id,
-        mediaType: card.media_type ?? "movie",
+        mediaType,
         preview: card,
         initialInteraction: { liked: true },
       });
-      void likeMovie({
-        tmdb_id: id,
-        media_type: card.media_type ?? "movie",
-        title: card.title,
-        poster_path: card.posterPath ?? null,
-      });
+      void (async () => {
+        const userId = await getCurrentUserId();
+        if (!userId) {
+          queuePendingInteraction({
+            tmdb_id: id,
+            media_type: mediaType,
+            title: card.title,
+            poster_path: card.posterPath ?? null,
+            patch: { liked: true },
+          });
+          return;
+        }
+        await likeMovie({
+          tmdb_id: id,
+          media_type: mediaType,
+          title: card.title,
+          poster_path: card.posterPath ?? null,
+        });
+      })();
     }
   }
 

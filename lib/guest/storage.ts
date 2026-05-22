@@ -1,4 +1,8 @@
-import { GuestState, UserPreferences } from "@/types/user";
+import {
+  GuestState,
+  PendingGuestInteraction,
+  UserPreferences,
+} from "@/types/user";
 
 const STORAGE_KEY = "cindr_guest";
 
@@ -15,8 +19,10 @@ const DEFAULT_STATE: GuestState = {
     era: "any",
     runtimePreference: "any",
   },
+  preferencesUpdatedAt: null,
   onboardingComplete: false,
   swipedIds: [],
+  pendingInteractions: [],
 };
 
 function isBrowser(): boolean {
@@ -50,11 +56,15 @@ export function savePreferences(prefs: Partial<UserPreferences>): void {
   const current = getGuestState();
   saveGuestState({
     preferences: { ...current.preferences, ...prefs },
+    preferencesUpdatedAt: new Date().toISOString(),
   });
 }
 
 export function markOnboardingComplete(): void {
-  saveGuestState({ onboardingComplete: true });
+  saveGuestState({
+    onboardingComplete: true,
+    preferencesUpdatedAt: new Date().toISOString(),
+  });
 }
 
 export function addSwipedId(id: number): void {
@@ -71,6 +81,34 @@ export function removeSwipedId(id: number): void {
 
 export function clearSwipedIds(): void {
   saveGuestState({ swipedIds: [] });
+}
+
+export function queuePendingInteraction(interaction: PendingGuestInteraction): void {
+  const current = getGuestState();
+  const existingIndex = current.pendingInteractions.findIndex(
+    (item) =>
+      item.tmdb_id === interaction.tmdb_id &&
+      item.media_type === interaction.media_type
+  );
+  const nextInteractions = [...current.pendingInteractions];
+
+  if (existingIndex >= 0) {
+    const existing = nextInteractions[existingIndex];
+    nextInteractions[existingIndex] = {
+      ...existing,
+      title: interaction.title || existing.title,
+      poster_path: interaction.poster_path ?? existing.poster_path,
+      patch: { ...existing.patch, ...interaction.patch },
+    };
+  } else {
+    nextInteractions.push(interaction);
+  }
+
+  saveGuestState({ pendingInteractions: nextInteractions });
+}
+
+export function clearPendingInteractions(): void {
+  saveGuestState({ pendingInteractions: [] });
 }
 
 export function clearGuestState(): void {

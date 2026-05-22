@@ -1,5 +1,8 @@
 import { supabase } from "./client";
-import { getGuestState } from "@/lib/guest/storage";
+import {
+  clearPendingInteractions,
+  getGuestState,
+} from "@/lib/guest/storage";
 import type {
   Profile,
   DbUserPreferences,
@@ -13,6 +16,18 @@ import type {
 
 const ERA_VALUES = ["new", "modern", "classic"] as const;
 const RUNTIME_VALUES = ["short", "medium", "long", "mini"] as const;
+const EMPTY_PREFERENCES: UserPreferences = {
+  languages: [],
+  genres: [],
+  moods: [],
+  contentTypes: [],
+  yearFrom: null,
+  yearTo: null,
+  people: [],
+  discoverMode: "taste",
+  era: "any",
+  runtimePreference: "any",
+};
 
 // ── Auth helpers ────────────────────────────────────────────────────────
 
@@ -228,6 +243,21 @@ export async function upsertPreferences(
   throw error;
 }
 
+function hasMeaningfulGuestPreferences(prefs: UserPreferences): boolean {
+  return (
+    prefs.languages.length > 0 ||
+    prefs.genres.length > 0 ||
+    prefs.moods.length > 0 ||
+    prefs.contentTypes.length > 0 ||
+    Boolean(prefs.yearFrom) ||
+    Boolean(prefs.yearTo) ||
+    prefs.people.length > 0 ||
+    prefs.discoverMode !== "taste" ||
+    prefs.era !== "any" ||
+    prefs.runtimePreference !== "any"
+  );
+}
+
 /**
  * After login/signup, push guest localStorage preferences into Supabase.
  */
@@ -236,12 +266,31 @@ export async function syncGuestToAccount(): Promise<void> {
   if (!userId) return;
 
   const guest = getGuestState();
+  const existingPrefs = await getDbPreferences();
+  const shouldSyncGuestPreferences =
+    hasMeaningfulGuestPreferences(guest.preferences) &&
+    (!existingPrefs || !existingPrefs.onboarding_complete);
 
-  if (guest.onboardingComplete && guest.preferences.languages.length > 0) {
+  if (shouldSyncGuestPreferences) {
     await upsertPreferences({
       ...guest.preferences,
-      onboardingComplete: true,
+      onboardingComplete: guest.onboardingComplete,
     });
+  }
+
+  if (guest.pendingInteractions.length > 0) {
+    for (const interaction of guest.pendingInteractions) {
+      await patchMovieInteraction(
+        {
+          tmdb_id: interaction.tmdb_id,
+          media_type: interaction.media_type,
+          title: interaction.title,
+          poster_path: interaction.poster_path,
+        },
+        interaction.patch
+      );
+    }
+    clearPendingInteractions();
   }
 
   await ensureProfileFromAuth();
@@ -280,18 +329,20 @@ export async function getEffectivePreferences(): Promise<{
           yearFrom: dbPrefs.year_from,
           yearTo: dbPrefs.year_to,
           people: dbPrefs.people ?? [],
-          discoverMode:
-            dbPrefs.discover_mode ?? guest.preferences.discoverMode ?? "taste",
-          era: dbPrefs.era ?? guest.preferences.era ?? legacyEra ?? "any",
+          discoverMode: dbPrefs.discover_mode ?? "taste",
+          era: dbPrefs.era ?? legacyEra ?? "any",
           runtimePreference:
             dbPrefs.runtime_preference ??
-            guest.preferences.runtimePreference ??
             (legacyRuntime === "mini" ? "short" : legacyRuntime) ??
             "any",
         },
         onboardingComplete: dbPrefs.onboarding_complete,
       };
     }
+    return {
+      preferences: EMPTY_PREFERENCES,
+      onboardingComplete: false,
+    };
   }
 
   return {

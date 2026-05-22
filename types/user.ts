@@ -22,10 +22,22 @@ export interface UserPreferences {
   runtimePreference: RuntimePreference;
 }
 
+export interface PendingGuestInteraction {
+  tmdb_id: number;
+  media_type: "movie" | "tv";
+  title: string;
+  poster_path: string | null;
+  patch: Partial<
+    Pick<SavedMovie, "liked" | "watchlisted" | "favourite" | "watched" | "rating">
+  >;
+}
+
 export interface GuestState {
   preferences: UserPreferences;
+  preferencesUpdatedAt: string | null;
   onboardingComplete: boolean;
   swipedIds: number[];
+  pendingInteractions: PendingGuestInteraction[];
 }
 
 // ── Supabase row types ──────────────────────────────────────────────────

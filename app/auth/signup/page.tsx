@@ -8,6 +8,12 @@ import { syncGuestToAccount } from "@/lib/supabase/core";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 import AppHeader from "@/components/layout/AppHeader";
 
+function getReturnTo(): string | null {
+  if (typeof window === "undefined") return null;
+  const value = new URLSearchParams(window.location.search).get("returnTo");
+  return value?.startsWith("/") && !value.startsWith("//") ? value : null;
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const dobInputRef = useRef<HTMLInputElement>(null);
@@ -21,7 +27,7 @@ export default function SignupPage() {
   useEffect(() => {
     let mounted = true;
     supabase.auth.getUser().then(({ data }) => {
-      if (mounted && data.user) router.replace("/discover");
+      if (mounted && data.user) router.replace(getReturnTo() ?? "/discover");
     });
     return () => {
       mounted = false;
@@ -82,7 +88,7 @@ export default function SignupPage() {
         setError(authError.message);
       } else {
         await syncGuestToAccount();
-        router.push("/onboarding?mode=quiz");
+        router.push(getReturnTo() ?? "/onboarding?mode=quiz");
       }
     } catch {
       setError("Something went wrong. Please try again.");
