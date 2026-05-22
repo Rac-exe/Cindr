@@ -3,14 +3,27 @@
 interface SwipeActionsProps {
   onSkip: () => void;
   onLike: () => void;
+  dragDirection?: "left" | "right" | null;
 }
 
-export default function SwipeActions({ onSkip, onLike }: SwipeActionsProps) {
+export default function SwipeActions({ onSkip, onLike, dragDirection }: SwipeActionsProps) {
+  const skipActive = dragDirection === "left";
+  const likeActive = dragDirection === "right";
+
   return (
     <div className="absolute -bottom-[4.5rem] left-0 right-0 z-20 flex items-center justify-center gap-5 sm:-bottom-20 sm:gap-6">
       <button
         onClick={onSkip}
-        className="grid h-14 w-14 place-items-center rounded-full border border-red-400/45 bg-[#14141b]/90 text-red-300 shadow-[0_18px_50px_rgba(0,0,0,0.45)] backdrop-blur-md transition-transform duration-200 hover:scale-105 active:scale-[0.96] sm:h-15 sm:w-15"
+        style={{
+          transform: skipActive ? "scale(1.18)" : undefined,
+          transition: "transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease",
+          boxShadow: skipActive ? "0 0 28px rgba(248,113,113,0.55), 0 18px 50px rgba(0,0,0,0.45)" : "0 18px 50px rgba(0,0,0,0.45)",
+        }}
+        className={`grid h-14 w-14 place-items-center rounded-full backdrop-blur-md hover:scale-105 active:scale-[0.96] sm:h-15 sm:w-15 ${
+          skipActive
+            ? "border-2 border-red-400 bg-red-500/20 text-red-300"
+            : "border border-red-400/45 bg-[#14141b]/90 text-red-300"
+        }`}
         aria-label="Skip"
       >
         <svg
@@ -27,7 +40,14 @@ export default function SwipeActions({ onSkip, onLike }: SwipeActionsProps) {
       </button>
       <button
         onClick={onLike}
-        className="grid h-16 w-16 place-items-center rounded-full border border-[var(--color-cindr)]/60 bg-[var(--color-cindr)] text-white shadow-[0_0_28px_rgba(216,90,48,0.38),0_18px_50px_rgba(0,0,0,0.45)] transition-transform duration-200 hover:scale-105 active:scale-[0.96] sm:h-17 sm:w-17"
+        style={{
+          transform: likeActive ? "scale(1.18)" : undefined,
+          transition: "transform 0.15s ease, box-shadow 0.15s ease",
+          boxShadow: likeActive
+            ? "0 0 40px rgba(216,90,48,0.65), 0 18px_50px_rgba(0,0,0,0.45)"
+            : "0 0 28px rgba(216,90,48,0.38), 0 18px 50px rgba(0,0,0,0.45)",
+        }}
+        className="grid h-16 w-16 place-items-center rounded-full border border-[var(--color-cindr)]/60 bg-[var(--color-cindr)] text-white hover:scale-105 active:scale-[0.96] sm:h-17 sm:w-17"
         aria-label="Add to your reel"
       >
         <svg

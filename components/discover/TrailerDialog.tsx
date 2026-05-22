@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,6 +37,36 @@ type TrailerStatus = "loading" | "ready" | "no_trailer" | "error";
 type InteractionFlags = Partial<
   Pick<SavedMovie, "liked" | "watchlisted" | "favourite" | "watched" | "rating">
 >;
+
+function OverviewText({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [clamped, setClamped] = useState(false);
+  const ref = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (el) setClamped(el.scrollHeight > el.clientHeight + 2);
+  }, [text]);
+
+  return (
+    <div className="mb-4">
+      <p
+        ref={ref}
+        className={`text-sm text-[var(--muted)] leading-relaxed ${expanded ? "" : "line-clamp-3"}`}
+      >
+        {text}
+      </p>
+      {(clamped || expanded) && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-1 text-xs text-[var(--color-cindr)] hover:underline"
+        >
+          {expanded ? "Show less" : "More"}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function TrailerDialog({
   movieId,
@@ -443,9 +473,7 @@ export default function TrailerDialog({
                 )}
 
                 {displayOverview && (
-                  <p className="text-sm text-[var(--muted)] leading-relaxed mb-4">
-                    {displayOverview}
-                  </p>
+                  <OverviewText text={displayOverview} />
                 )}
 
                 <div className="mb-4 grid grid-cols-4 gap-2">

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
+import { motion, useMotionValue, useTransform, useMotionValueEvent, PanInfo } from "framer-motion";
 import type { MovieCardData } from "@/types/movie";
 import SwipeActions from "./SwipeActions";
 
@@ -27,6 +27,7 @@ export default function SwipeDeck({
     nonce: number;
     cardId: number;
   } | null>(null);
+  const [dragDirection, setDragDirection] = useState<"left" | "right" | null>(null);
   const actionNonce = useRef(0);
   const activeRequest = swipeRequest ?? actionRequest ?? undefined;
 
@@ -49,12 +50,14 @@ export default function SwipeDeck({
           onSwipe={onSwipe}
           isTop={i === 0}
           swipeRequest={i === 0 ? activeRequest : undefined}
+          onDragChange={i === 0 ? setDragDirection : undefined}
         />
       ))}
       {visibleCards.length > 0 && (
         <SwipeActions
           onSkip={() => requestSwipe("left")}
           onLike={() => requestSwipe("right")}
+          dragDirection={dragDirection}
         />
       )}
     </div>
@@ -68,6 +71,7 @@ function SwipeCard({
   onSwipe,
   isTop,
   swipeRequest,
+  onDragChange,
 }: {
   card: MovieCardData;
   index: number;
@@ -75,6 +79,7 @@ function SwipeCard({
   onSwipe: (id: number, direction: "left" | "right") => void;
   isTop: boolean;
   swipeRequest?: { direction: "left" | "right"; nonce: number; cardId: number };
+  onDragChange?: (dir: "left" | "right" | null) => void;
 }) {
   const [exitingDirection, setExitingDirection] = useState<"left" | "right" | null>(null);
   const handledNonce = useRef<number | null>(null);
@@ -85,8 +90,16 @@ function SwipeCard({
   const borderOpacity = useTransform(x, [-180, 0, 180], [0.9, 0.45, 0.9]);
   const accentX = useTransform(x, [-180, 180], ["-22%", "22%"]);
 
+  useMotionValueEvent(x, "change", (v) => {
+    if (!isTop) return;
+    if (v < -18) onDragChange?.("left");
+    else if (v > 18) onDragChange?.("right");
+    else onDragChange?.(null);
+  });
+
   function exitCard(direction: "left" | "right") {
     if (exitingDirection) return;
+    onDragChange?.(null);
     setExitingDirection(direction);
     onSwipeStart?.(card.id, direction);
     setTimeout(() => onSwipe(card.id, direction), 180);
@@ -97,6 +110,8 @@ function SwipeCard({
     if (Math.abs(offset) > SWIPE_THRESHOLD) {
       const direction = offset > 0 ? "right" : "left";
       exitCard(direction);
+    } else {
+      onDragChange?.(null);
     }
   }
 
@@ -113,7 +128,29 @@ function SwipeCard({
   const scale = 1 - index * 0.04;
   const yOffset = index * 10;
 
+  const leftGlow = useTransform(x, [-160, -30], [0.38, 0]);
+  const rightGlow = useTransform(x, [30, 160], [0, 0.38]);
+
   return (
+    <>
+      {isTop && (
+        <>
+          <motion.div
+            className="fixed inset-0 pointer-events-none z-40"
+            style={{
+              opacity: leftGlow,
+              background: "linear-gradient(to right, rgba(239,68,68,0.55) 0%, rgba(239,68,68,0.12) 35%, transparent 65%)",
+            }}
+          />
+          <motion.div
+            className="fixed inset-0 pointer-events-none z-40"
+            style={{
+              opacity: rightGlow,
+              background: "linear-gradient(to left, rgba(216,90,48,0.55) 0%, rgba(216,90,48,0.12) 35%, transparent 65%)",
+            }}
+          />
+        </>
+      )}
     <motion.div
       className={`absolute inset-0 touch-none ${isTop ? "will-change-transform" : ""}`}
       style={{
@@ -233,5 +270,6 @@ function SwipeCard({
         </div>
       </div>
     </motion.div>
+    </>
   );
 }

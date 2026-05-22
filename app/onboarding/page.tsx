@@ -113,7 +113,7 @@ function OnboardingContent() {
           }
         }
         if (preferences.era && preferences.era !== "any") {
-          next.movie_era = [preferences.era];
+          next.movie_era = preferences.era.split(",").filter(Boolean);
         }
         if (
           preferences.runtimePreference &&
@@ -202,7 +202,12 @@ function OnboardingContent() {
   function buildPrefs(moods: string[]) {
     const fromYear = normalizeYear(yearFrom);
     const toYear = normalizeYear(yearTo);
-    const era = (answers.movie_era?.[0] ?? "any") as EraPreference;
+    const eraSelections = answers.movie_era ?? [];
+    const era = (
+      eraSelections.length === 0 || eraSelections.includes("any")
+        ? "any"
+        : eraSelections.join(",")
+    ) as EraPreference;
     const runtimeRaw = answers.series_commitment?.[0] ?? "any";
     const runtimePreference = (
       runtimeRaw === "mini" ? "short" : runtimeRaw
@@ -444,9 +449,9 @@ function OnboardingContent() {
       <OnboardingAtmosphere />
       <AppHeader />
 
-      <div className="w-full max-w-md max-h-[calc(100dvh-6rem)] overflow-y-auto relative z-10 rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:max-h-[calc(100dvh-7rem)] sm:rounded-[2rem] sm:p-7">
+      <div className="flex flex-col w-full max-w-md relative z-10 rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:rounded-[2rem] sm:p-7" style={{ maxHeight: "calc(100dvh - 6rem)" }}>
         {/* Main progress: 0/2, 1/2, 2/2 */}
-        <div className="mb-5 sm:mb-8">
+        <div className="shrink-0 mb-4 sm:mb-6">
           <div className="flex items-center justify-between mb-1.5 sm:mb-2">
             <span className="text-xs text-[var(--muted)]">
               {mainProgress} of 2
@@ -479,7 +484,7 @@ function OnboardingContent() {
           )}
         </div>
 
-        <div className="min-h-0 sm:min-h-[420px]">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           {step === "languages" && (
             <LanguageStep selected={selectedLangs} onToggle={toggleLang} />
           )}
@@ -503,7 +508,7 @@ function OnboardingContent() {
           )}
         </div>
 
-        <div className="grid grid-cols-[0.45fr_1fr] gap-2 sm:gap-2.5">
+        <div className="shrink-0 mt-3 grid grid-cols-[0.45fr_1fr] gap-2 sm:mt-4 sm:gap-2.5">
           <button
             onClick={handleBack}
             className="py-2.5 text-sm rounded-full border border-white/10 bg-white/[0.04] text-white/80 font-medium transition-all hover:border-white/20 hover:bg-white/[0.08] sm:py-3.5 sm:text-base"
@@ -635,14 +640,14 @@ function LanguageStep({
   onToggle: (code: string) => void;
 }) {
   return (
-    <div className="mb-4 sm:mb-8">
-      <h1 className="text-xl font-bold tracking-tight mb-1 sm:text-2xl sm:mb-2">
+    <div className="mb-3">
+      <h1 className="text-lg font-bold tracking-tight mb-0.5 sm:text-2xl sm:mb-1">
         What languages do you watch in?
       </h1>
-      <p className="text-xs text-[var(--muted)] mb-3 sm:text-sm sm:mb-6">
+      <p className="text-xs text-[var(--muted)] mb-2 sm:mb-4">
         Pick up to {MAX_LANGUAGES}.
       </p>
-      <div className="grid grid-cols-2 gap-1.5 sm:gap-2.5">
+      <div className="grid grid-cols-2 gap-1 sm:gap-1.5">
         {LANGUAGES.map((lang) => {
           const isSelected = selected.includes(lang.code);
           const isDisabled = !isSelected && selected.length >= MAX_LANGUAGES;
@@ -651,7 +656,7 @@ function LanguageStep({
               key={lang.code}
               onClick={() => onToggle(lang.code)}
               disabled={isDisabled}
-              className={`flex items-center gap-2 p-2 rounded-xl border transition-all text-left sm:gap-3 sm:p-3.5 ${
+              className={`flex items-center gap-1.5 p-1.5 rounded-lg border transition-all text-left sm:gap-2 sm:p-2.5 ${
                 isSelected
                   ? "border-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
                   : isDisabled
@@ -659,12 +664,12 @@ function LanguageStep({
                   : "border-[var(--border-color)] bg-[var(--surface)] hover:border-[var(--muted)]"
               }`}
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[9px] font-semibold uppercase tracking-wide text-[var(--color-cindr)] sm:h-8 sm:w-8 sm:text-[10px]">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-[8px] font-semibold uppercase tracking-wide text-[var(--color-cindr)] sm:h-7 sm:w-7 sm:text-[9px]">
                 {lang.code}
               </span>
               <div className="min-w-0">
-                <div className="truncate text-xs font-medium sm:text-sm">{lang.name}</div>
-                <div className="truncate text-[10px] text-[var(--muted)] sm:text-xs">
+                <div className="truncate text-[11px] font-medium sm:text-xs">{lang.name}</div>
+                <div className="truncate text-[9px] text-[var(--muted)] sm:text-[10px]">
                   {lang.nativeName}
                 </div>
               </div>

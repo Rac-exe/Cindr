@@ -40,6 +40,7 @@ const MOVIE_QUESTIONS: QuizQuestion[] = [
       { label: "Timeless classics", value: "classic" },
       { label: "Mix it up", value: "any" },
     ],
+    multi: true,
   },
 ];
 

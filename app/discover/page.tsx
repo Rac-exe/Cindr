@@ -165,6 +165,54 @@ function PosterSkeleton({ message }: { message: string }) {
   );
 }
 
+const MODE_HINTS: Record<DiscoverMode, string> = {
+  taste: "Follows your preferences first.",
+  random: "Skips taste signals, keeps hard filters.",
+};
+
+function ModeToggle({
+  mode,
+  disabled,
+  onChange,
+}: {
+  mode: DiscoverMode;
+  disabled: boolean;
+  onChange: (m: DiscoverMode) => void;
+}) {
+  const [hovered, setHovered] = useState<DiscoverMode | null>(null);
+
+  return (
+    <div className="mb-2 flex w-full max-w-[440px] flex-col items-center">
+      <div className="grid w-40 grid-cols-2 rounded-full border border-white/10 bg-[#111015]/72 p-0.5 shadow-[0_12px_34px_rgba(0,0,0,0.22)] backdrop-blur-md">
+        {(["taste", "random"] as DiscoverMode[]).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => onChange(m)}
+            disabled={disabled}
+            onMouseEnter={() => setHovered(m)}
+            onMouseLeave={() => setHovered(null)}
+            className={`rounded-full px-2.5 py-1.5 text-[10px] font-bold capitalize tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+              mode === m
+                ? "bg-[var(--color-cindr)] text-white shadow-[0_0_18px_rgba(216,90,48,0.28)]"
+                : "text-white/48 hover:bg-white/[0.05] hover:text-white"
+            }`}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
+      <div className="mt-1 h-6">
+        {hovered && (
+          <p className="max-w-[17rem] rounded-full border border-white/10 bg-black/30 px-3 py-1 text-center text-[10px] leading-relaxed text-white/45">
+            {MODE_HINTS[hovered]}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function DiscoverPage() {
   const [preferences, setPreferences] = useState<UserPreferences>(
     DEFAULT_DISCOVER_PREFERENCES
@@ -184,6 +232,7 @@ export default function DiscoverPage() {
     card: MovieCardData;
     direction: "left" | "right";
   } | null>(null);
+  const emptyRetryCount = useRef(0);
   const [swipeRequest, setSwipeRequest] = useState<{
     direction: "left" | "right";
     nonce: number;
@@ -223,7 +272,8 @@ export default function DiscoverPage() {
       if (activePreferences.yearTo) {
         params.set("yearTo", String(activePreferences.yearTo));
       }
-      if (mode === "taste" && activePreferences.era !== "any") {
+      const eraValues = activePreferences.era.split(",").filter(Boolean);
+      if (mode === "taste" && eraValues.length > 0 && !eraValues.includes("any")) {
         params.set("era", activePreferences.era);
       }
       if (mode === "taste" && activePreferences.runtimePreference !== "any") {
@@ -468,12 +518,12 @@ export default function DiscoverPage() {
   async function handleModeChange(nextMode: DiscoverMode) {
     if (nextMode === preferences.discoverMode) return;
 
+    emptyRetryCount.current = 0;
     const nextPreferences = {
       ...preferences,
       discoverMode: nextMode,
     };
     setPreferences(nextPreferences);
-    setCards([]);
     setLastSwipe(null);
     setPage(1);
     setMessage(findingMessage(nextMode));
@@ -578,6 +628,12 @@ export default function DiscoverPage() {
   }
 
   useEffect(() => {
+    if (cards.length > 0) {
+      emptyRetryCount.current = 0;
+    }
+  }, [cards.length]);
+
+  useEffect(() => {
     if (
       loading ||
       cards.length > 0 ||
@@ -585,7 +641,11 @@ export default function DiscoverPage() {
     ) {
       return;
     }
+    if (emptyRetryCount.current >= 4) {
+      return;
+    }
     const retry = window.setTimeout(() => {
+      emptyRetryCount.current += 1;
       void reshuffleDeck();
     }, 900);
     return () => window.clearTimeout(retry);
@@ -645,58 +705,14 @@ export default function DiscoverPage() {
     <div className="flex flex-col min-h-[100dvh] relative overflow-hidden">
       <CinematicBackdrop density="subtle" />
       <AppHeader />
-      <main className="flex-1 flex flex-col items-center justify-center pt-14 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pt-16 md:pb-8 px-4 relative z-10 overflow-hidden">
-        <div className="group mb-2 flex w-full max-w-[440px] flex-col items-center">
-          <div className="grid w-40 grid-cols-2 rounded-full border border-white/10 bg-[#111015]/72 p-0.5 shadow-[0_12px_34px_rgba(0,0,0,0.22)] backdrop-blur-md">
-            {(["taste", "random"] as DiscoverMode[]).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => void handleModeChange(mode)}
-                disabled={!preferencesReady || loading}
-                title={
-                  mode === "random"
-                    ? "Random ignores taste signals but keeps explicit hard filters."
-                    : "Taste uses your saved preferences and advanced filters."
-                }
-                className={`rounded-full px-2.5 py-1.5 text-[10px] font-bold capitalize tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                  preferences.discoverMode === mode
-                    ? "bg-[var(--color-cindr)] text-white shadow-[0_0_18px_rgba(216,90,48,0.28)]"
-                    : "text-white/48 hover:bg-white/[0.05] hover:text-white"
-                }`}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
-          <p className="mt-1 max-w-[17rem] rounded-full border border-white/10 bg-black/30 px-3 py-1 text-center text-[10px] leading-relaxed text-white/45 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
-            {preferences.discoverMode === "random"
-              ? "Random skips taste, keeps explicit filters."
-              : "Taste follows preferences first."}
-          </p>
-        </div>
+      <main className="flex-1 flex flex-col items-center justify-center pt-14 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pt-16 md:pb-24 px-4 relative z-10">
+        <ModeToggle
+          mode={preferences.discoverMode}
+          disabled={!preferencesReady}
+          onChange={handleModeChange}
+        />
         <AnimatePresence mode="wait">
-          {loading ? (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col items-center gap-4"
-            >
-              <PosterSkeleton message={message} />
-            </motion.div>
-          ) : cards.length === 0 ? (
-            <motion.div
-              key="reshuffling"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col items-center gap-4"
-            >
-              <PosterSkeleton message={message} />
-            </motion.div>
-          ) : (
+          {cards.length > 0 ? (
             <motion.div
               key="deck"
               initial={{ opacity: 0, y: 10 }}
@@ -709,6 +725,16 @@ export default function DiscoverPage() {
                 onSwipe={handleSwipe}
                 swipeRequest={swipeRequest}
               />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col items-center gap-4"
+            >
+              <PosterSkeleton message={message} />
             </motion.div>
           )}
         </AnimatePresence>

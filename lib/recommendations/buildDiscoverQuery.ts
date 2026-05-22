@@ -123,18 +123,22 @@ export function buildDiscoverQuery(params: DiscoverParams): URLSearchParams {
   if (params.yearFrom || params.yearTo) {
     setYearRange(q, params);
   } else if (params.mediaType !== "tv") {
-    const prefix = dateParamPrefix(params);
-    switch (params.era) {
-      case "new":
-        q.set(`${prefix}.gte`, `${year - 2}-01-01`);
-        break;
-      case "modern":
-        q.set(`${prefix}.gte`, "2000-01-01");
-        q.set(`${prefix}.lte`, "2019-12-31");
-        break;
-      case "classic":
-        q.set(`${prefix}.lte`, "1999-12-31");
-        break;
+    const eraValues = (params.era ?? "any").split(",").filter(Boolean);
+    if (eraValues.length > 0 && !eraValues.includes("any")) {
+      const hasNew = eraValues.includes("new");
+      const hasModern = eraValues.includes("modern");
+      const hasClassic = eraValues.includes("classic");
+      const prefix = dateParamPrefix(params);
+      // lower bound: only if classic not selected (classic goes back to beginning)
+      if (!hasClassic) {
+        if (hasNew && !hasModern) q.set(`${prefix}.gte`, `${year - 2}-01-01`);
+        else if (hasModern) q.set(`${prefix}.gte`, "2000-01-01");
+      }
+      // upper bound: only if new not selected (new has no ceiling)
+      if (!hasNew) {
+        if (hasClassic && !hasModern) q.set(`${prefix}.lte`, "1999-12-31");
+        else if (hasModern) q.set(`${prefix}.lte`, "2019-12-31");
+      }
     }
   }
 
