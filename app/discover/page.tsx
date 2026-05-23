@@ -803,7 +803,7 @@ export default function DiscoverPage() {
     <div className="relative flex h-[100svh] min-h-[100svh] flex-col overflow-hidden md:h-[100dvh] md:min-h-[100dvh]">
       <CinematicBackdrop density="subtle" />
       <AppHeader />
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-start px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[5rem] sm:px-4 md:justify-center md:pt-16 md:pb-28">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col items-center overflow-hidden px-3 pb-[env(safe-area-inset-bottom)] pt-[4.65rem] sm:px-4 md:pt-16">
         <ModeToggle
           mode={preferences.discoverMode}
           disabled={!preferencesReady}
@@ -815,7 +815,7 @@ export default function DiscoverPage() {
               key="deck"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-[440px]"
+              className="flex-1 min-h-0 w-full"
             >
               <SwipeDeck
                 cards={cards}

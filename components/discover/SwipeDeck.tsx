@@ -50,38 +50,47 @@ export default function SwipeDeck({
   }
 
   return (
-    <div className="relative mx-auto h-[clamp(340px,calc(100svh-16.5rem),560px)] w-[min(84vw,360px)] sm:h-[min(calc(100dvh-22rem),560px)] sm:w-[min(92vw,430px)] md:h-[min(calc(100dvh-22rem),620px)] md:w-[min(92vw,440px)]">
-      {visibleCards.map((card, i) => (
-        <SwipeCard
-          key={`${card.media_type ?? "movie"}-${card.id}`}
-          card={card}
-          index={i}
-          onSwipeStart={onSwipeStart}
-          onSwipe={onSwipe}
-          isTop={i === 0}
-          swipeRequest={i === 0 ? activeRequest : undefined}
-          onDragChange={i === 0 ? setDragDirection : undefined}
-          onOpenTrailer={i === 0 ? onOpenTrailer : undefined}
-          trailerOpen={trailerOpen}
-          showRecommendedChip={discoverMode === "taste"}
-        />
-      ))}
+    <div className="flex h-full w-full flex-col">
+      {/* Card area — fills all available flex space */}
+      <div className="relative mx-auto flex-1 min-h-0 w-[min(84vw,360px)] sm:w-[min(92vw,430px)] md:w-[min(92vw,440px)] md:max-h-[640px] mt-1">
+        {visibleCards.map((card, i) => (
+          <SwipeCard
+            key={`${card.media_type ?? "movie"}-${card.id}`}
+            card={card}
+            index={i}
+            onSwipeStart={onSwipeStart}
+            onSwipe={onSwipe}
+            isTop={i === 0}
+            swipeRequest={i === 0 ? activeRequest : undefined}
+            onDragChange={i === 0 ? setDragDirection : undefined}
+            onOpenTrailer={i === 0 ? onOpenTrailer : undefined}
+            trailerOpen={trailerOpen}
+            showRecommendedChip={discoverMode === "taste"}
+          />
+        ))}
+      </div>
+
+      {/* Actions area — normal flow below the card */}
       {visibleCards.length > 0 && (
-        <SwipeActions
-          onSkip={() => requestSwipe("left")}
-          onLike={() => requestSwipe("right")}
-          onOpenTrailer={onOpenTrailer}
-          dragDirection={dragDirection}
-          trailerOpen={trailerOpen}
-        />
-      )}
-      {canUndo && onUndo && visibleCards.length > 0 && (
-        <button
-          onClick={onUndo}
-          className="absolute -bottom-[5.75rem] right-0 z-20 h-6 rounded-full border border-white/10 bg-[#111015]/90 px-3 text-[11px] font-medium text-white/55 backdrop-blur-md transition-colors hover:border-[var(--color-cindr)]/40 hover:text-white/85 active:scale-95 sm:-bottom-[6.5rem]"
-        >
-          Undo
-        </button>
+        <div className="flex w-full flex-col items-center gap-2 pb-2 pt-5 sm:pt-6">
+          <SwipeActions
+            onSkip={() => requestSwipe("left")}
+            onLike={() => requestSwipe("right")}
+            onOpenTrailer={onOpenTrailer}
+            dragDirection={dragDirection}
+            trailerOpen={trailerOpen}
+          />
+          {canUndo && onUndo && (
+            <div className="flex w-[min(84vw,360px)] justify-end sm:w-[min(92vw,430px)]">
+              <button
+                onClick={onUndo}
+                className="h-6 rounded-full border border-white/10 bg-[#111015]/90 px-3 text-[11px] font-medium text-white/55 backdrop-blur-md transition-colors hover:border-[var(--color-cindr)]/40 hover:text-white/85 active:scale-95"
+              >
+                Undo
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

@@ -14,7 +14,7 @@ export default function SwipeActions({ onSkip, onLike, onOpenTrailer, dragDirect
   const trailerActive = dragDirection === "up" || trailerOpen;
 
   return (
-    <div className="absolute -bottom-[4.15rem] left-0 right-0 z-20 flex items-center justify-center gap-3 sm:-bottom-[5rem] sm:gap-5">
+    <div className="flex items-center justify-center gap-3 sm:gap-5">
       {/* Skip */}
       <button
         onClick={onSkip}
