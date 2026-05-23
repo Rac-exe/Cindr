@@ -7,6 +7,7 @@ import {
   BookmarkSimple,
   ChatCircleText,
   FilmSlate,
+  GithubLogo,
   Info,
   SignOut,
   SlidersHorizontal,
@@ -121,6 +122,18 @@ export default function AppHeader() {
         <Link href="/" className="flex items-center" aria-label="Cindr home">
           <CindrLogo markClassName="h-8 w-8" textClassName="text-xl" />
         </Link>
+
+        {pathname === "/about" && (
+          <a
+            href="https://github.com/MrRaccooon/Cindr"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="GitHub"
+            className="absolute left-1/2 -translate-x-1/2 inline-flex h-9 w-9 items-center justify-center rounded-xl text-white/50 transition-colors hover:bg-white/[0.06] hover:text-white"
+          >
+            <GithubLogo size={20} weight="fill" />
+          </a>
+        )}
 
         {!isLanding && (
           <nav className={navWrapClass()}>
