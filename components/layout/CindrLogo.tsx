@@ -9,7 +9,7 @@ export function CindrLogoMark({ className = "h-8 w-8" }: { className?: string })
     <svg
       aria-hidden="true"
       viewBox="0 0 48 48"
-      className={`shrink-0 text-[var(--color-cindr)] ${className}`}
+      className={`cindr-logo-mark shrink-0 text-[var(--color-cindr)] transition-transform duration-200 ease-out hover:scale-[1.02] ${className}`}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -38,8 +38,10 @@ export function CindrLogoMark({ className = "h-8 w-8" }: { className?: string })
           strokeLinecap="round"
         />
         <path d="M28 19.5v9l7-4.5-7-4.5Z" fill="#FAECE7" />
-        <circle cx="34.5" cy="13.5" r="2.5" fill="currentColor" />
-        <circle cx="34.5" cy="34.5" r="2.5" fill="currentColor" />
+        <g className="cindr-logo-orbit">
+          <circle cx="34.5" cy="13.5" r="2.5" fill="currentColor" />
+          <circle cx="34.5" cy="34.5" r="2.5" fill="currentColor" />
+        </g>
       </g>
     </svg>
   );

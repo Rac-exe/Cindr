@@ -19,6 +19,27 @@ import { clearGuestState } from "@/lib/guest/storage";
 import { supabase } from "@/lib/supabase/client";
 import type { FeedbackCategory } from "@/types/user";
 
+function navWrapClass(mobile = false) {
+  const display = mobile ? "flex xl:hidden" : "hidden xl:flex";
+  return `${display} items-center gap-2`;
+}
+
+function navItemClass(active: boolean, square = false) {
+  const size = square ? "h-10 w-10 justify-center px-0" : "h-10 gap-2 px-3";
+  const base = `nav-motion-target inline-flex items-center rounded-xl text-sm font-medium transition-colors ${size}`;
+  return `${base} rounded-none border-b-2 ${
+    active
+      ? "border-[var(--theme-accent)] text-white"
+      : "border-transparent text-white/55 hover:text-white"
+  }`;
+}
+
+function navIconClass(active: boolean) {
+  return active
+    ? "nav-motion-icon text-[var(--theme-accent)]"
+    : "nav-motion-icon";
+}
+
 export default function AppHeader() {
   const pathname = usePathname();
   const isLanding = pathname === "/";
@@ -96,13 +117,13 @@ export default function AppHeader() {
 
   return (
     <>
-      <header className="fixed left-3 right-3 top-3 z-50 flex min-h-16 items-center justify-between rounded-2xl border border-white/10 bg-[#0d0c11]/72 px-3 py-2.5 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl md:left-5 md:right-5 md:px-4">
+      <header className="fixed left-0 right-0 top-0 z-50 flex min-h-14 items-center justify-between border-b border-white/10 bg-[#09090c]/76 px-4 py-2 shadow-none backdrop-blur-xl md:px-6">
         <Link href="/" className="flex items-center" aria-label="Cindr home">
           <CindrLogo markClassName="h-8 w-8" textClassName="text-xl" />
         </Link>
 
         {!isLanding && (
-          <nav className="hidden items-center gap-1 lg:flex">
+          <nav className={navWrapClass()}>
           <NavLink
             href="/discover"
             label="Discover"
@@ -113,22 +134,14 @@ export default function AppHeader() {
             <button
               type="button"
               onClick={() => setPrefsOpen((current) => !current)}
-              className={`inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium transition-colors ${
-                pathname.startsWith("/onboarding")
-                  ? "bg-white/[0.08] text-white"
-                  : "text-white/58 hover:bg-white/[0.06] hover:text-white"
-              }`}
+              className={navItemClass(pathname.startsWith("/onboarding"))}
               aria-expanded={prefsOpen}
               aria-haspopup="menu"
             >
               <SlidersHorizontal
                 size={18}
                 weight={pathname.startsWith("/onboarding") ? "fill" : "regular"}
-                className={
-                  pathname.startsWith("/onboarding")
-                    ? "text-[var(--color-cindr)]"
-                    : ""
-                }
+                className={navIconClass(pathname.startsWith("/onboarding"))}
               />
               Preferences
             </button>
@@ -171,11 +184,7 @@ export default function AppHeader() {
             <button
               type="button"
               onClick={() => setProfileOpen((current) => !current)}
-              className={`grid h-10 w-10 place-items-center rounded-xl text-sm transition-colors ${
-                pathname.startsWith("/profile")
-                  ? "bg-white/[0.08] text-white"
-                  : "text-white/58 hover:bg-white/[0.06] hover:text-white"
-              }`}
+              className={navItemClass(pathname.startsWith("/profile"), true)}
               aria-label="Open profile menu"
               aria-expanded={profileOpen}
               aria-haspopup="menu"
@@ -183,11 +192,7 @@ export default function AppHeader() {
               <UserCircle
                 size={20}
                 weight={pathname.startsWith("/profile") ? "fill" : "regular"}
-                className={
-                  pathname.startsWith("/profile")
-                    ? "text-[var(--color-cindr)]"
-                    : ""
-                }
+                className={navIconClass(pathname.startsWith("/profile"))}
               />
             </button>
             {profileOpen && (
@@ -232,19 +237,16 @@ export default function AppHeader() {
           </nav>
         )}
         {!isLanding && (
-          <nav className="flex items-center gap-1 lg:hidden" aria-label="Mobile navigation">
+          <nav className={navWrapClass(true)} aria-label="Mobile navigation">
             <Link
               href="/discover"
-              className={`grid h-11 w-11 place-items-center rounded-xl transition-colors ${
-                pathname.startsWith("/discover")
-                  ? "bg-white/[0.08] text-[var(--color-cindr)]"
-                  : "text-white/58 hover:bg-white/[0.06] hover:text-white"
-              }`}
+              className={navItemClass(pathname.startsWith("/discover"), true)}
               aria-label="Discover"
             >
               <FilmSlate
                 size={20}
                 weight={pathname.startsWith("/discover") ? "fill" : "regular"}
+                className={navIconClass(pathname.startsWith("/discover"))}
               />
             </Link>
 
@@ -255,11 +257,7 @@ export default function AppHeader() {
                   setPrefsOpen((current) => !current);
                   setProfileOpen(false);
                 }}
-                className={`grid h-11 w-11 place-items-center rounded-xl transition-colors ${
-                  pathname.startsWith("/onboarding")
-                    ? "bg-white/[0.08] text-[var(--color-cindr)]"
-                    : "text-white/58 hover:bg-white/[0.06] hover:text-white"
-                }`}
+                className={navItemClass(pathname.startsWith("/onboarding"), true)}
                 aria-label="Open preferences menu"
                 aria-expanded={prefsOpen}
                 aria-haspopup="menu"
@@ -267,6 +265,7 @@ export default function AppHeader() {
                 <SlidersHorizontal
                   size={20}
                   weight={pathname.startsWith("/onboarding") ? "fill" : "regular"}
+                  className={navIconClass(pathname.startsWith("/onboarding"))}
                 />
               </button>
               {prefsOpen && (
@@ -306,11 +305,7 @@ export default function AppHeader() {
                   setProfileOpen((current) => !current);
                   setPrefsOpen(false);
                 }}
-                className={`grid h-11 w-11 place-items-center rounded-xl transition-colors ${
-                  mobileProfileActive
-                    ? "bg-white/[0.08] text-[var(--color-cindr)]"
-                    : "text-white/58 hover:bg-white/[0.06] hover:text-white"
-                }`}
+                className={navItemClass(mobileProfileActive, true)}
                 aria-label="Open profile menu"
                 aria-expanded={profileOpen}
                 aria-haspopup="menu"
@@ -318,6 +313,7 @@ export default function AppHeader() {
                 <UserCircle
                   size={20}
                   weight={mobileProfileActive ? "fill" : "regular"}
+                  className={navIconClass(mobileProfileActive)}
                 />
               </button>
               {profileOpen && (
@@ -413,17 +409,13 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium transition-colors ${
-        active
-          ? "bg-white/[0.08] text-white"
-          : "text-white/58 hover:bg-white/[0.06] hover:text-white"
-      }`}
+      className={navItemClass(active)}
     >
       {NavIcon && (
         <NavIcon
           size={18}
           weight={active ? "fill" : "regular"}
-          className={active ? "text-[var(--color-cindr)]" : ""}
+          className={navIconClass(active)}
         />
       )}
       {label}

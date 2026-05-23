@@ -18,6 +18,7 @@ interface SwipeDeckProps {
   onOpenTrailer?: () => void;
   trailerOpen?: boolean;
   discoverMode?: string;
+  modeTransitionNonce?: number;
   onUndo?: () => void;
   canUndo?: boolean;
 }
@@ -30,6 +31,7 @@ export default function SwipeDeck({
   onOpenTrailer,
   trailerOpen,
   discoverMode,
+  modeTransitionNonce,
   onUndo,
   canUndo,
 }: SwipeDeckProps) {
@@ -41,7 +43,18 @@ export default function SwipeDeck({
   } | null>(null);
   const [dragDirection, setDragDirection] = useState<"left" | "right" | "up" | null>(null);
   const actionNonce = useRef(0);
+  const handledModeTransitionNonce = useRef<number | null>(null);
   const activeRequest = swipeRequest ?? actionRequest ?? undefined;
+  const [modeTransitionActive, setModeTransitionActive] = useState(false);
+
+  useEffect(() => {
+    if (!modeTransitionNonce) return;
+    if (handledModeTransitionNonce.current === modeTransitionNonce) return;
+    handledModeTransitionNonce.current = modeTransitionNonce;
+    setModeTransitionActive(true);
+    const timer = window.setTimeout(() => setModeTransitionActive(false), 380);
+    return () => window.clearTimeout(timer);
+  }, [modeTransitionNonce]);
 
   function requestSwipe(direction: "left" | "right") {
     const topCard = visibleCards[0];
@@ -52,8 +65,8 @@ export default function SwipeDeck({
   }
 
   return (
-    <div className="flex h-full w-full flex-col">
-      <div className="relative mx-auto flex-1 min-h-0 w-[min(84vw,360px)] sm:w-[min(92vw,430px)] md:w-[min(92vw,440px)] md:max-h-[640px] mt-1">
+    <div className="flex h-full w-full flex-col items-center">
+      <div className="relative mx-auto mt-1 aspect-[2/3] h-[min(58svh,590px)] min-h-0 max-h-[590px] w-auto max-w-[min(86vw,430px)] sm:h-[min(62svh,630px)] md:h-[min(64svh,650px)]">
         {visibleCards.map((card, i) => (
           <SwipeCard
             key={`${card.media_type ?? "movie"}-${card.id}`}
@@ -67,25 +80,32 @@ export default function SwipeDeck({
             onOpenTrailer={i === 0 ? onOpenTrailer : undefined}
             trailerOpen={trailerOpen}
             showRecommendedChip={discoverMode === "taste"}
+            randomMode={discoverMode === "random"}
+            modeTransitionActive={modeTransitionActive}
           />
         ))}
       </div>
 
       {visibleCards.length > 0 && (
-        <div className="flex w-full flex-col items-center gap-2 pb-2 pt-5 sm:pt-6">
+        <div className="flex w-full flex-col items-center gap-2 pb-1 pt-7 sm:pt-8">
           <SwipeActions
             onSkip={() => requestSwipe("left")}
             onLike={() => requestSwipe("right")}
             onOpenTrailer={onOpenTrailer}
             dragDirection={dragDirection}
             trailerOpen={trailerOpen}
+            randomMode={discoverMode === "random"}
           />
           {canUndo && onUndo && (
-            <div className="flex w-[min(84vw,360px)] justify-end sm:w-[min(92vw,430px)]">
+            <div className="flex w-[min(86vw,430px)] justify-center">
               <button
                 onClick={onUndo}
-                className="h-7 rounded-full border border-white/10 bg-[#111015]/88 px-3 text-[11px] font-medium text-white/58 backdrop-blur-md transition-colors hover:bg-white/[0.06] hover:text-white active:scale-[0.98]"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-[#111015]/88 px-3 text-[11px] font-medium text-white/58 backdrop-blur-md transition-colors hover:bg-white/[0.06] hover:text-white active:scale-[0.98]"
               >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M9 9H4V4" />
+                  <path d="M4 9a8 8 0 1 1 2.35 5.66" />
+                </svg>
                 Undo
               </button>
             </div>
@@ -107,6 +127,8 @@ function SwipeCard({
   onOpenTrailer,
   trailerOpen,
   showRecommendedChip,
+  randomMode,
+  modeTransitionActive,
 }: {
   card: MovieCardData;
   index: number;
@@ -118,6 +140,8 @@ function SwipeCard({
   onOpenTrailer?: () => void;
   trailerOpen?: boolean;
   showRecommendedChip?: boolean;
+  randomMode?: boolean;
+  modeTransitionActive?: boolean;
 })
  {
   const [exitingDirection, setExitingDirection] = useState<"left" | "right" | null>(null);
@@ -129,7 +153,6 @@ function SwipeCard({
   const rightOpacity = useTransform(x, [32, 110], [0, 1]);
   const upOpacity = useTransform(y, [-88, -28], [1, 0]);
   const borderOpacity = useTransform(x, [-180, 0, 180], [0.72, 0.38, 0.72]);
-  const accentX = useTransform(x, [-180, 180], ["-12%", "12%"]);
 
   useMotionValueEvent(x, "change", (v) => {
     if (!isTop) return;
@@ -236,38 +259,62 @@ function SwipeCard({
               transition: { duration: 0.22, ease: MOTION_EASE_IN },
             }
           : {
-              opacity: 1,
-              scale,
-              y: yOffset,
-              transition: { duration: 0.26, ease: MOTION_EASE_OUT },
+              opacity: modeTransitionActive && !isTop ? 0 : 1,
+              scale: modeTransitionActive && isTop ? scale * 0.9 : scale,
+              y: modeTransitionActive && isTop ? yOffset + 46 : yOffset,
+              transition: { duration: 0.28, ease: MOTION_EASE_OUT },
             }
       }
     >
+      {card.isSuperMatch && (
+        <div
+          className={`cindr-match-aura pointer-events-none absolute -inset-5 rounded-[2.25rem] blur-2xl ${
+            randomMode
+              ? "bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.22),rgba(226,232,240,0.1)_36%,transparent_72%)]"
+              : "bg-[radial-gradient(ellipse_at_center,rgba(251,191,36,0.34),rgba(216,90,48,0.14)_36%,transparent_72%)]"
+          }`}
+          aria-hidden="true"
+        />
+      )}
       <div
-        className="group relative h-full w-full select-none overflow-hidden rounded-[1.75rem] bg-[#0f0f14] p-[1px]"
+        className={`group relative h-full w-full select-none overflow-hidden rounded-[1.75rem] border bg-[#0f0f14] ${
+          randomMode
+            ? "border-slate-100/35"
+            : card.isSuperMatch
+            ? "border-amber-300/45"
+            : "border-[var(--color-cindr)]/35"
+        }`}
         style={{
           boxShadow: card.isSuperMatch
-            ? "0 0 0 1px rgba(245,158,11,0.45), 0 24px 80px rgba(0,0,0,0.52)"
+            ? "0 24px 80px rgba(0,0,0,0.52)"
             : "0 24px 80px rgba(0,0,0,0.52)",
         }}
       >
-        {card.isSuperMatch ? (
-          <motion.div
-            className="absolute inset-0 rounded-[2rem]"
-            style={{ x: isTop ? accentX : 0 }}
-            animate={{ opacity: 0.9 }}
-            transition={{ duration: 0.2 }}
-            initial={false}
-          >
-            <div className="absolute inset-0 rounded-[2rem] bg-[linear-gradient(130deg,rgba(251,191,36,0.35),rgba(245,158,11,0.98),rgba(255,255,255,0.22),rgba(217,119,6,0.62),rgba(251,191,36,0.35))]" />
-          </motion.div>
-        ) : (
-          <motion.div
-            className="absolute inset-0 rounded-[2rem] bg-[linear-gradient(120deg,rgba(216,90,48,0.08),rgba(216,90,48,0.42),rgba(255,255,255,0.1),rgba(153,60,29,0.22),rgba(216,90,48,0.08))]"
-            style={{ opacity: isTop ? borderOpacity : 0.22, x: isTop ? accentX : 0 }}
-          />
-        )}
-        <div className="relative h-full w-full overflow-hidden rounded-[calc(2rem-1px)] bg-[var(--surface)]">
+        <div
+          className={`pointer-events-none absolute -inset-px z-20 rounded-[inherit] mix-blend-screen opacity-70 ${
+            randomMode
+              ? "bg-[radial-gradient(ellipse_at_50%_-12%,rgba(255,255,255,0.34),rgba(226,232,240,0.1)_28%,transparent_58%)]"
+              : "bg-[radial-gradient(ellipse_at_50%_-12%,rgba(255,236,214,0.34),rgba(255,184,115,0.1)_28%,transparent_58%)]"
+          }`}
+        />
+        <div
+          className={`pointer-events-none absolute inset-0 z-20 rounded-[inherit] ${
+            randomMode
+              ? "shadow-[inset_0_1px_0_rgba(255,255,255,0.42),inset_18px_0_42px_rgba(226,232,240,0.055),inset_-18px_0_42px_rgba(226,232,240,0.055)]"
+              : "shadow-[inset_0_1px_0_rgba(255,236,214,0.42),inset_18px_0_42px_rgba(255,184,115,0.055),inset_-18px_0_42px_rgba(255,184,115,0.055)]"
+          }`}
+        />
+        <motion.div
+          className={`pointer-events-none absolute inset-0 z-20 rounded-[inherit] ${
+            randomMode
+              ? "ring-1 ring-slate-100/35"
+              : card.isSuperMatch
+              ? "ring-1 ring-amber-300/45"
+              : "ring-1 ring-[var(--color-cindr)]/35"
+          }`}
+          style={{ opacity: isTop ? borderOpacity : 0.22 }}
+        />
+        <div className="relative h-full w-full overflow-hidden rounded-[calc(1.75rem-1px)] bg-[var(--surface)]">
           {card.posterUrl ? (
             <>
               <Image
@@ -331,7 +378,11 @@ function SwipeCard({
             {card.isSuperMatch && (
               <div className="mb-2 flex items-center min-w-0">
                 <span
-                  className="inline-flex min-w-0 items-center gap-1.5 truncate rounded-full border border-amber-300/30 bg-amber-300/16 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-100"
+                  className={`inline-flex min-w-0 items-center gap-1.5 truncate rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                    randomMode
+                      ? "border border-slate-100/25 bg-white/10 text-slate-100"
+                      : "border border-amber-300/30 bg-amber-300/16 text-amber-100"
+                  }`}
                 >
                   <svg className="shrink-0" width="9" height="9" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true">
                     <path d="M4 0L5 3H8L5.5 4.8L6.5 8L4 6.2L1.5 8L2.5 4.8L0 3H3L4 0Z"/>

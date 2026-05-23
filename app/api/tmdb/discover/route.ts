@@ -7,6 +7,69 @@ import {
 } from "@/lib/constants/quiz";
 import type { Movie } from "@/types/movie";
 
+const LOCAL_DISCOVER_RESULTS: Movie[] = [
+  {
+    id: 27205,
+    title: "Inception",
+    overview:
+      "A skilled thief enters dreams to plant an idea inside a target's mind.",
+    poster_path: "/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg",
+    backdrop_path: null,
+    release_date: "2010-07-16",
+    vote_average: 8.8,
+    vote_count: 36000,
+    popularity: 95,
+    genre_ids: [28, 878, 53],
+    original_language: "en",
+    media_type: "movie",
+  },
+  {
+    id: 155,
+    title: "The Dark Knight",
+    overview:
+      "Batman faces a criminal mastermind who throws Gotham into chaos.",
+    poster_path: "/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
+    backdrop_path: null,
+    release_date: "2008-07-18",
+    vote_average: 9,
+    vote_count: 33000,
+    popularity: 90,
+    genre_ids: [28, 80, 18],
+    original_language: "en",
+    media_type: "movie",
+  },
+  {
+    id: 157336,
+    title: "Interstellar",
+    overview:
+      "Explorers travel through a wormhole in search of a future for humanity.",
+    poster_path: "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+    backdrop_path: null,
+    release_date: "2014-11-07",
+    vote_average: 8.7,
+    vote_count: 35000,
+    popularity: 92,
+    genre_ids: [12, 18, 878],
+    original_language: "en",
+    media_type: "movie",
+  },
+  {
+    id: 438631,
+    title: "Dune",
+    overview:
+      "A gifted young man travels to a dangerous desert planet with a vast destiny.",
+    poster_path: "/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
+    backdrop_path: null,
+    release_date: "2021-10-22",
+    vote_average: 8,
+    vote_count: 13000,
+    popularity: 88,
+    genre_ids: [12, 878],
+    original_language: "en",
+    media_type: "movie",
+  },
+];
+
 function parsePositiveIds(value: string | null, separator: string): number[] {
   return (
     value
@@ -64,6 +127,19 @@ export async function GET(request: NextRequest) {
       rawYearFrom && rawYearTo && rawYearFrom > rawYearTo
         ? rawYearFrom
         : rawYearTo;
+
+    if (!process.env.TMDB_API_KEY && !process.env.TMDB_READ_ACCESS_TOKEN) {
+      const rotated = LOCAL_DISCOVER_RESULTS.map((_, index, items) => {
+        const offset = (page - 1) % items.length;
+        return items[(index + offset) % items.length];
+      });
+      return NextResponse.json({
+        page,
+        results: rotated,
+        total_results: rotated.length,
+        total_pages: 1,
+      });
+    }
 
     const wantsMovies = contentTypes.length === 0 || contentTypes.includes("movies");
     const wantsSeries = contentTypes.includes("series");
