@@ -17,7 +17,7 @@ import AppHeader from "@/components/layout/AppHeader";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
-import { Camera, ChatCircleText, Trash } from "@phosphor-icons/react";
+import { Camera, ChatCircleText, Trash, UserCircle } from "@phosphor-icons/react";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -303,11 +303,9 @@ export default function ProfilePage() {
           </Link>
           <div className="text-center max-w-xs rounded-[2rem] border border-white/10 bg-[#111015]/80 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
             <div className="mb-4 flex justify-center">
-              <svg className="w-14 h-14 text-[var(--color-cindr)] opacity-40" viewBox="0 0 120 120" fill="none">
-                <circle cx="60" cy="60" r="55" stroke="currentColor" strokeWidth="2" />
-                <circle cx="60" cy="60" r="42" stroke="currentColor" strokeWidth="1.5" />
-                <circle cx="60" cy="60" r="10" fill="currentColor" />
-              </svg>
+              <div className="grid h-14 w-14 place-items-center rounded-full border border-[var(--color-cindr)]/30 bg-[var(--color-cindr)]/10 text-[var(--color-cindr)]">
+                <UserCircle size={34} weight="duotone" />
+              </div>
             </div>
             <h1 className="text-xl font-bold mb-2">Your Profile</h1>
             <p className="text-sm text-[var(--muted)] mb-6">
