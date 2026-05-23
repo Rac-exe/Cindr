@@ -52,7 +52,11 @@ function OverviewText({ text }: { text: string }) {
     <div className="mb-4">
       <p
         ref={ref}
-        className={`text-sm text-[var(--muted)] leading-relaxed ${expanded ? "" : "line-clamp-3"}`}
+        className={`text-sm leading-relaxed text-[var(--muted)] ${
+          expanded
+            ? ""
+            : "max-h-[4.5rem] overflow-y-auto overscroll-contain pr-1"
+        }`}
       >
         {text}
       </p>
@@ -335,7 +339,7 @@ export default function TrailerDialog({
         <CinematicBackdrop density="subtle" />
 
         <motion.div
-          className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-[var(--surface)]/95 border border-white/15 shadow-[0_28px_100px_rgba(0,0,0,0.6)] backdrop-blur-md"
+          className="relative w-full max-w-lg max-h-[90vh] touch-pan-y overflow-y-auto overscroll-contain rounded-t-2xl border border-white/15 bg-[var(--surface)]/95 shadow-[0_28px_100px_rgba(0,0,0,0.6)] backdrop-blur-md sm:rounded-2xl"
           initial={{ y: "100%" }}
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
