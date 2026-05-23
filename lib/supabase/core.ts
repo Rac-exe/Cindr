@@ -625,6 +625,44 @@ export async function getSavedMovies(): Promise<SavedMovie[]> {
   return (data as SavedMovie[]) ?? [];
 }
 
+// ── CindrSense taste fingerprint persistence ─────────────────────────────
+
+import type { TasteProfile } from "@/lib/recommendations/tasteProfile";
+
+/**
+ * Persist the user's taste fingerprint to Supabase so it survives
+ * across devices and browser clears. Fire-and-forget — no await needed.
+ */
+export async function saveTasteFingerprint(profile: TasteProfile): Promise<void> {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+  await supabase.from("taste_fingerprints").upsert(
+    {
+      user_id:     userId,
+      fingerprint: profile,
+      swipe_count: profile.swipeCount,
+      updated_at:  new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  );
+}
+
+/**
+ * Load the user's taste fingerprint from Supabase.
+ * Returns null for guests or if no fingerprint exists yet.
+ */
+export async function loadTasteFingerprint(): Promise<TasteProfile | null> {
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+  const { data } = await supabase
+    .from("taste_fingerprints")
+    .select("fingerprint, updated_at")
+    .eq("user_id", userId)
+    .single();
+  if (!data?.fingerprint) return null;
+  return data.fingerprint as TasteProfile;
+}
+
 /** Lightweight — only fetches liked tmdb_ids to exclude from discover feed */
 export async function getLikedTmdbIds(): Promise<number[]> {
   const userId = await getCurrentUserId();

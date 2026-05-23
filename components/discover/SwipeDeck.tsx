@@ -118,7 +118,8 @@ function SwipeCard({
   onOpenTrailer?: () => void;
   trailerOpen?: boolean;
   showRecommendedChip?: boolean;
-}) {
+})
+ {
   const [exitingDirection, setExitingDirection] = useState<"left" | "right" | null>(null);
   const handledNonce = useRef<number | null>(null);
   const x = useMotionValue(0);
@@ -242,11 +243,31 @@ function SwipeCard({
             }
       }
     >
-      <div className="group relative h-full w-full select-none overflow-hidden rounded-[2rem] bg-[#0f0f14] p-[1px] shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
-        <motion.div
-          className="absolute inset-0 rounded-[2rem] bg-[linear-gradient(120deg,rgba(216,90,48,0.18),rgba(216,90,48,0.95),rgba(255,255,255,0.16),rgba(153,60,29,0.5),rgba(216,90,48,0.18))]"
-          style={{ opacity: isTop ? borderOpacity : 0.28, x: isTop ? accentX : 0 }}
-        />
+      <div
+        className="group relative h-full w-full select-none overflow-hidden rounded-[2rem] bg-[#0f0f14] p-[1px]"
+        style={{
+          boxShadow: card.isSuperMatch
+            ? "0 0 0 1px rgba(251,191,36,0.6), 0 0 55px rgba(251,191,36,0.32), 0 0 100px rgba(251,191,36,0.14), 0 28px 90px rgba(0,0,0,0.55)"
+            : "0 28px 90px rgba(0,0,0,0.55)",
+        }}
+      >
+        {/* Border gradient — gold for SuperMatch, orange normally */}
+        {card.isSuperMatch ? (
+          <motion.div
+            className="absolute inset-0 rounded-[2rem]"
+            style={{ x: isTop ? accentX : 0 }}
+            animate={{ opacity: [0.72, 1, 0.72] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            initial={false}
+          >
+            <div className="absolute inset-0 rounded-[2rem] bg-[linear-gradient(130deg,rgba(251,191,36,0.35),rgba(245,158,11,0.98),rgba(255,255,255,0.22),rgba(217,119,6,0.62),rgba(251,191,36,0.35))]" />
+          </motion.div>
+        ) : (
+          <motion.div
+            className="absolute inset-0 rounded-[2rem] bg-[linear-gradient(120deg,rgba(216,90,48,0.18),rgba(216,90,48,0.95),rgba(255,255,255,0.16),rgba(153,60,29,0.5),rgba(216,90,48,0.18))]"
+            style={{ opacity: isTop ? borderOpacity : 0.28, x: isTop ? accentX : 0 }}
+          />
+        )}
         <div className="relative h-full w-full overflow-hidden rounded-[calc(2rem-1px)] bg-[var(--surface)]">
           {card.posterUrl ? (
             <>
@@ -308,7 +329,37 @@ function SwipeCard({
           )}
 
           <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
-            {card.becauseOf && showRecommendedChip && (
+            {/* CindrMatch — highest priority chip */}
+            {card.isSuperMatch && (
+              <div className="mb-2 flex items-center min-w-0">
+                <motion.span
+                  className="inline-flex min-w-0 items-center gap-1.5 truncate rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-zinc-900"
+                  style={{ boxShadow: "0 2px 22px rgba(251,191,36,0.65), 0 0 8px rgba(251,191,36,0.4)" }}
+                  animate={{ opacity: [0.88, 1, 0.88] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                  initial={false}
+                >
+                  <svg className="shrink-0" width="9" height="9" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true">
+                    <path d="M4 0L5 3H8L5.5 4.8L6.5 8L4 6.2L1.5 8L2.5 4.8L0 3H3L4 0Z"/>
+                  </svg>
+                  <span className="truncate">CindrMatch</span>
+                </motion.span>
+              </div>
+            )}
+            {/* Discovery chip — quality gem outside comfort zone */}
+            {!card.isSuperMatch && card.isDiscovery && (
+              <div className="mb-2 flex items-center min-w-0">
+                <span className="inline-flex min-w-0 items-center gap-1.5 truncate rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/80 backdrop-blur-sm">
+                  <svg className="shrink-0" width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                    <circle cx="4" cy="4" r="3"/>
+                    <path d="M4 2v2l1 1"/>
+                  </svg>
+                  <span className="truncate">Discovery pick</span>
+                </span>
+              </div>
+            )}
+            {/* TMDB recommendation chip */}
+            {!card.isSuperMatch && !card.isDiscovery && card.becauseOf && showRecommendedChip && (
               <div className="mb-2 flex items-center min-w-0">
                 <span className="inline-flex min-w-0 items-center gap-1.5 truncate rounded-full bg-[var(--color-cindr)] px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-[0_2px_12px_rgba(216,90,48,0.5)]">
                   <svg className="shrink-0" width="8" height="8" viewBox="0 0 8 8" fill="currentColor">

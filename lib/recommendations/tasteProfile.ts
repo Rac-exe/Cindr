@@ -1,23 +1,27 @@
 /**
- * Taste Profile — learns from every swipe using exponential moving average.
+ * CindrSense Taste Profile
  *
- * "Never stale" mechanism: ALL weights are multiplied by DECAY on every swipe,
- * so a preference from 30 swipes ago has less than 40% of its original influence.
- * The profile stays relevant as taste shifts over time.
+ * Learns from every swipe using multi-dimensional exponential moving averages.
  *
- * Exploration: every 7th batch, return a "stretch" genre (moderate positive weight)
- * instead of the top genre so the feed never becomes an echo chamber.
+ * Dimensions tracked beyond genres:
+ *   - Tone/vibe   (dark, fun, emotional, tense, mind_bending, epic)
+ *   - Era         (decade buckets)
+ *   - Popularity bias  (hidden gems vs mainstream)
+ *   - Runtime bias     (short vs long)
+ *
+ * "Never stale": all weights decay on every swipe so recent taste dominates.
+ * Exploration injection: every 7th batch uses a stretch genre to prevent echo chambers.
  */
 
-const STORAGE_KEY = "cindr_taste_v1";
+const STORAGE_KEY = "cindr_taste_v2";
 
-const LIKE_DELTA = 0.25;   // how much liking adds to a genre weight
-const SKIP_DELTA = 0.12;   // how much skipping subtracts
-const DECAY = 0.97;        // applied to ALL weights on every swipe
-const MIN_SIGNAL = 5;      // swipes before we trust the profile
-const MAX_RECENT = 8;      // recent liked IDs to track for TMDB recs
+const LIKE_DELTA = 0.25;
+const SKIP_DELTA = 0.12;
+const DECAY      = 0.97;
+const MIN_SIGNAL = 5;
+const MAX_RECENT = 8;
 
-/** Map genre display names → TMDB IDs (matching GENRE_MAP in discover page) */
+// ── Genre → TMDB ID map ────────────────────────────────────────────────────
 export const GENRE_NAME_TO_ID: Record<string, number> = {
   Action: 28,
   Adventure: 12,
@@ -44,29 +48,115 @@ export const GENRE_NAME_TO_ID: Record<string, number> = {
   "War & Politics": 10768,
 };
 
+// ── Tone/vibe dimensions ───────────────────────────────────────────────────
+export interface ToneWeights {
+  dark:        number;  // dark, gritty, intense
+  fun:         number;  // light, comedy, feel-good
+  emotional:   number;  // tearjerker, heartfelt
+  tense:       number;  // thriller, suspense, horror
+  mind_bending: number; // sci-fi, mystery, philosophical
+  epic:        number;  // action, adventure, grand scope
+}
+
+/** How strongly each genre contributes to each tone dimension (0–1) */
+export const GENRE_TONE_MAP: Partial<Record<string, Partial<ToneWeights>>> = {
+  Action:            { epic: 1.0,  tense: 0.3 },
+  Adventure:         { epic: 0.9,  fun: 0.3 },
+  Animation:         { fun: 0.7,   mind_bending: 0.2 },
+  Comedy:            { fun: 1.0 },
+  Crime:             { dark: 0.8,  tense: 0.6 },
+  Documentary:       { mind_bending: 0.6 },
+  Drama:             { emotional: 0.8, dark: 0.3 },
+  Family:            { fun: 0.8,   emotional: 0.3 },
+  Fantasy:           { epic: 0.6,  mind_bending: 0.5 },
+  History:           { emotional: 0.5, dark: 0.3, epic: 0.4 },
+  Horror:            { dark: 1.0,  tense: 0.9 },
+  Music:             { emotional: 0.7, fun: 0.3 },
+  Mystery:           { tense: 0.7, mind_bending: 0.6 },
+  Romance:           { emotional: 0.9, fun: 0.2 },
+  "Sci-Fi":          { mind_bending: 0.9, epic: 0.4 },
+  "Science Fiction": { mind_bending: 0.9, epic: 0.4 },
+  Thriller:          { tense: 0.9, dark: 0.5 },
+  War:               { dark: 0.8,  epic: 0.6, emotional: 0.4 },
+  Western:           { epic: 0.5,  dark: 0.4 },
+  "Action & Adventure": { epic: 0.9, tense: 0.3 },
+  "Sci-Fi & Fantasy":   { mind_bending: 0.8, epic: 0.5 },
+};
+
+// ── Era buckets ────────────────────────────────────────────────────────────
+export interface EraWeights {
+  pre1980:  number;
+  eighties: number;
+  nineties: number;
+  aughts:   number;  // 2000–2009
+  tens:     number;  // 2010–2019
+  recent:   number;  // 2020+
+}
+
+// ── Full profile ───────────────────────────────────────────────────────────
 export interface TasteProfile {
-  /** genre name → learned weight in [-1, 1] */
-  genreWeights: Record<string, number>;
-  /** language code → affinity in [0, 1] */
-  langWeights: Record<string, number>;
-  /** minimum vote_average to show (drifts toward avg liked-movie rating) */
-  voteFloor: number;
-  swipeCount: number;
-  likeCount: number;
-  /** most recently liked movie IDs + titles for TMDB /recommendations injection */
-  recentLiked: Array<{ id: number; mediaType: "movie" | "tv"; title: string }>;
-  updatedAt: number;
+  genreWeights:       Record<string, number>;
+  langWeights:        Record<string, number>;
+  toneWeights:        ToneWeights;
+  eraWeights:         EraWeights;
+  /** keyword name → affinity 0–1, built from liked movies' TMDB keywords */
+  keywordWeights:     Record<string, number>;
+  /** -1 = loves mainstream hits, +1 = loves hidden gems */
+  popularityTierBias: number;
+  /** -1 = prefers short films, +1 = prefers long films */
+  runtimeBias:        number;
+  voteFloor:          number;
+  swipeCount:         number;
+  likeCount:          number;
+  recentLiked:        Array<{ id: number; mediaType: "movie" | "tv"; title: string; genres?: string[] }>;
+  updatedAt:          number;
+}
+
+function blankTone(): ToneWeights {
+  return { dark: 0, fun: 0, emotional: 0, tense: 0, mind_bending: 0, epic: 0 };
+}
+
+function blankEra(): EraWeights {
+  return { pre1980: 0, eighties: 0, nineties: 0, aughts: 0, tens: 0, recent: 0 };
 }
 
 function blank(): TasteProfile {
   return {
-    genreWeights: {},
-    langWeights: {},
-    voteFloor: 5.5,
-    swipeCount: 0,
-    likeCount: 0,
-    recentLiked: [],
-    updatedAt: Date.now(),
+    genreWeights:       {},
+    langWeights:        {},
+    toneWeights:        blankTone(),
+    eraWeights:         blankEra(),
+    keywordWeights:     {},
+    popularityTierBias: 0,
+    runtimeBias:        0,
+    voteFloor:          5.5,
+    swipeCount:         0,
+    likeCount:          0,
+    recentLiked:        [],
+    updatedAt:          Date.now(),
+  };
+}
+
+/** Hydrate a raw stored object into a full TasteProfile (adds missing fields). */
+export function hydrateTasteProfile(raw: Partial<TasteProfile>): TasteProfile {
+  return hydrate(raw);
+}
+
+function hydrate(raw: Partial<TasteProfile>): TasteProfile {
+  const b = blank();
+  return {
+    genreWeights:       raw.genreWeights       ?? b.genreWeights,
+    langWeights:        raw.langWeights        ?? b.langWeights,
+    toneWeights:        { ...b.toneWeights,    ...(raw.toneWeights    ?? {}) },
+    eraWeights:         { ...b.eraWeights,     ...(raw.eraWeights     ?? {}) },
+    keywordWeights:     raw.keywordWeights     ?? b.keywordWeights,
+    popularityTierBias: raw.popularityTierBias ?? b.popularityTierBias,
+    runtimeBias:        raw.runtimeBias        ?? b.runtimeBias,
+    voteFloor:          raw.voteFloor          ?? b.voteFloor,
+    swipeCount:         raw.swipeCount         ?? b.swipeCount,
+    likeCount:          raw.likeCount          ?? b.likeCount,
+    recentLiked:        raw.recentLiked        ?? b.recentLiked,
+    updatedAt:          raw.updatedAt          ?? b.updatedAt,
   };
 }
 
@@ -74,10 +164,14 @@ export function loadTasteProfile(): TasteProfile {
   if (typeof window === "undefined") return blank();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as TasteProfile) : blank();
+    if (raw) return hydrate(JSON.parse(raw) as Partial<TasteProfile>);
+    // Migrate from old v1 key
+    const oldRaw = localStorage.getItem("cindr_taste_v1");
+    if (oldRaw) return hydrate(JSON.parse(oldRaw) as Partial<TasteProfile>);
   } catch {
-    return blank();
+    // ignore
   }
+  return blank();
 }
 
 export function saveTasteProfile(p: TasteProfile): void {
@@ -85,7 +179,7 @@ export function saveTasteProfile(p: TasteProfile): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
   } catch {
-    // storage quota — non-fatal
+    // quota — non-fatal
   }
 }
 
@@ -93,81 +187,174 @@ function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
 }
 
+/** Compute the tone vector for a given set of genre names (averaged). */
+export function computeCardTone(genres: string[]): ToneWeights {
+  const tone = blankTone();
+  if (genres.length === 0) return tone;
+  for (const genre of genres) {
+    const mapping = GENRE_TONE_MAP[genre];
+    if (!mapping) continue;
+    for (const [k, v] of Object.entries(mapping)) {
+      (tone as Record<string, number>)[k] += v as number;
+    }
+  }
+  // Normalize by genre count so multi-genre films don't score higher
+  for (const k of Object.keys(tone) as (keyof ToneWeights)[]) {
+    tone[k] /= genres.length;
+  }
+  return tone;
+}
+
+function yearToEraKey(year?: string): keyof EraWeights | null {
+  if (!year) return null;
+  const y = parseInt(year, 10);
+  if (isNaN(y)) return null;
+  if (y < 1980) return "pre1980";
+  if (y < 1990) return "eighties";
+  if (y < 2000) return "nineties";
+  if (y < 2010) return "aughts";
+  if (y < 2020) return "tens";
+  return "recent";
+}
+
 export function updateTasteProfile(
   profile: TasteProfile,
   movie: {
-    genres: string[];
-    language: string;
-    rating: number;
-    id: number;
-    mediaType: "movie" | "tv";
-    title: string;
+    genres:          string[];
+    language:        string;
+    rating:          number;
+    id:              number;
+    mediaType:       "movie" | "tv";
+    title:           string;
+    year?:           string;
+    tmdbPopularity?: number;
+    voteCount?:      number;
+    runtime?:        number;
   },
   liked: boolean
 ): TasteProfile {
   const p: TasteProfile = {
     ...profile,
-    genreWeights: { ...profile.genreWeights },
-    langWeights: { ...profile.langWeights },
-    recentLiked: [...profile.recentLiked],
+    genreWeights:  { ...profile.genreWeights },
+    langWeights:   { ...profile.langWeights },
+    toneWeights:   { ...profile.toneWeights },
+    eraWeights:    { ...profile.eraWeights },
+    recentLiked:   [...profile.recentLiked],
   };
 
-  // ── Decay all existing weights (the "never stale" core) ────────────────
-  for (const k of Object.keys(p.genreWeights)) {
-    p.genreWeights[k] *= DECAY;
-  }
+  // ── Decay all existing weights (the "never stale" core) ──────────────────
+  for (const k of Object.keys(p.genreWeights)) p.genreWeights[k] *= DECAY;
   for (const k of Object.keys(p.langWeights)) {
-    p.langWeights[k] = p.langWeights[k] * DECAY + (1 - DECAY) * 0.5; // decays toward neutral
+    p.langWeights[k] = p.langWeights[k] * DECAY + (1 - DECAY) * 0.5;
+  }
+  for (const k of Object.keys(p.toneWeights) as (keyof ToneWeights)[]) {
+    p.toneWeights[k] *= DECAY;
+  }
+  for (const k of Object.keys(p.eraWeights) as (keyof EraWeights)[]) {
+    p.eraWeights[k] *= DECAY;
   }
 
-  // ── Update genre weights ───────────────────────────────────────────────
+  // ── Genre weights ─────────────────────────────────────────────────────────
   for (const genre of movie.genres) {
     const cur = p.genreWeights[genre] ?? 0;
-    if (liked) {
-      // Tapers as weight approaches +1 (avoids runaway dominance)
-      p.genreWeights[genre] = clamp(cur + LIKE_DELTA * (1 - cur), -1, 1);
-    } else {
-      // Stronger impact when this genre had positive weight (punishes false positives)
-      p.genreWeights[genre] = clamp(cur - SKIP_DELTA * (1 + cur) * 0.6, -1, 1);
-    }
+    p.genreWeights[genre] = liked
+      ? clamp(cur + LIKE_DELTA * (1 - cur), -1, 1)
+      : clamp(cur - SKIP_DELTA * (1 + cur) * 0.6, -1, 1);
   }
 
-  // ── Language affinity ─────────────────────────────────────────────────
+  // ── Tone/vibe weights ─────────────────────────────────────────────────────
+  const cardTone = computeCardTone(movie.genres);
+  for (const k of Object.keys(cardTone) as (keyof ToneWeights)[]) {
+    const val = cardTone[k];
+    if (val < 0.05) continue; // too small to matter
+    const cur = p.toneWeights[k];
+    p.toneWeights[k] = liked
+      ? clamp(cur + LIKE_DELTA * 0.75 * (1 - cur) * val, -1, 1)
+      : clamp(cur - SKIP_DELTA * 0.75 * (1 + cur) * val * 0.6, -1, 1);
+  }
+
+  // ── Language affinity ─────────────────────────────────────────────────────
   if (movie.language) {
     const cur = p.langWeights[movie.language] ?? 0.5;
-    p.langWeights[movie.language] = clamp(
-      liked ? cur + 0.07 : cur - 0.04,
-      0,
-      1
-    );
+    p.langWeights[movie.language] = clamp(liked ? cur + 0.07 : cur - 0.04, 0, 1);
   }
 
-  // ── Vote floor — slow EMA toward 90 % of liked rating ─────────────────
+  // ── Era weights ───────────────────────────────────────────────────────────
+  const eraKey = yearToEraKey(movie.year);
+  if (eraKey) {
+    const cur = p.eraWeights[eraKey];
+    p.eraWeights[eraKey] = liked
+      ? clamp(cur + 0.18 * (1 - cur), -1, 1)
+      : clamp(cur - 0.09 * (1 + cur) * 0.6, -1, 1);
+  }
+
+  // ── Popularity tier bias — learns gem vs mainstream preference ────────────
+  if (movie.tmdbPopularity !== undefined && liked) {
+    const isGem = movie.tmdbPopularity < 80;
+    const delta = isGem ? 0.08 : -0.04;
+    p.popularityTierBias = clamp(p.popularityTierBias * 0.97 + delta, -1, 1);
+  }
+
+  // ── Runtime bias ──────────────────────────────────────────────────────────
+  if (movie.runtime && liked) {
+    const target = movie.runtime < 90 ? -0.5 : movie.runtime > 130 ? 0.5 : 0;
+    p.runtimeBias = clamp(p.runtimeBias * 0.95 + target * 0.08, -1, 1);
+  }
+
+  // ── Vote floor: slow EMA toward 90% of liked rating ──────────────────────
   if (liked && movie.rating > 0) {
-    const target = movie.rating * 0.88; // slightly below actual rating
+    const target = movie.rating * 0.88;
     p.voteFloor = clamp(p.voteFloor * 0.93 + target * 0.07, 4.0, 7.5);
   }
 
-  // ── Bookkeeping ───────────────────────────────────────────────────────
+  // ── Bookkeeping ───────────────────────────────────────────────────────────
   p.swipeCount += 1;
   if (liked) {
     p.likeCount += 1;
     p.recentLiked = [
-      { id: movie.id, mediaType: movie.mediaType, title: movie.title },
+      { id: movie.id, mediaType: movie.mediaType, title: movie.title, genres: movie.genres },
       ...p.recentLiked.filter((r) => r.id !== movie.id),
     ].slice(0, MAX_RECENT);
   }
-
   p.updatedAt = Date.now();
   return p;
 }
 
-/** True once we have enough swipes to generate meaningful signal */
+/**
+ * Enrich the profile with TMDB keywords from a liked movie.
+ * Called async/background after a like — never blocks the swipe.
+ */
+export function updateProfileKeywords(
+  profile: TasteProfile,
+  keywords: string[]
+): TasteProfile {
+  if (keywords.length === 0) return profile;
+
+  const p = { ...profile, keywordWeights: { ...profile.keywordWeights } };
+
+  // Gentle decay on existing weights
+  for (const k of Object.keys(p.keywordWeights)) {
+    p.keywordWeights[k] *= 0.93;
+  }
+
+  // Reinforce each new keyword
+  for (const kw of keywords.slice(0, 15)) {
+    const cur = p.keywordWeights[kw] ?? 0;
+    p.keywordWeights[kw] = clamp(cur + 0.22 * (1 - cur), 0, 1);
+  }
+
+  // Prune dead weight
+  for (const k of Object.keys(p.keywordWeights)) {
+    if (p.keywordWeights[k] < 0.05) delete p.keywordWeights[k];
+  }
+
+  return p;
+}
+
 export function hasSignal(p: TasteProfile): boolean {
   return p.swipeCount >= MIN_SIGNAL;
 }
 
-/** Top N genres by positive weight → TMDB IDs */
 export function topGenreIds(p: TasteProfile, n = 3): number[] {
   return Object.entries(p.genreWeights)
     .filter(([, w]) => w > 0.08)
@@ -177,7 +364,6 @@ export function topGenreIds(p: TasteProfile, n = 3): number[] {
     .filter(Boolean) as number[];
 }
 
-/** Strongly disliked genre IDs (to exclude from queries) */
 export function dislikedGenreIds(p: TasteProfile, threshold = -0.25): number[] {
   return Object.entries(p.genreWeights)
     .filter(([, w]) => w < threshold)
@@ -185,10 +371,6 @@ export function dislikedGenreIds(p: TasteProfile, threshold = -0.25): number[] {
     .filter(Boolean) as number[];
 }
 
-/**
- * Every 7th fetch, return a "stretch" genre ID — moderate positive weight
- * but not the dominant one — to keep the feed from becoming an echo chamber.
- */
 export function explorationGenreId(p: TasteProfile, fetchCount: number): number | null {
   if (!hasSignal(p) || fetchCount % 7 !== 0) return null;
   const moderate = Object.entries(p.genreWeights)

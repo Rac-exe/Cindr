@@ -19,6 +19,8 @@ import {
   patchMovieInteraction,
   upsertPreferences,
   getLikedTmdbIds,
+  saveTasteFingerprint,
+  loadTasteFingerprint,
 } from "@/lib/supabase/core";
 import type { Movie, MovieCardData } from "@/types/movie";
 import { posterUrl } from "@/types/movie";
@@ -32,12 +34,15 @@ import {
   loadTasteProfile,
   saveTasteProfile,
   updateTasteProfile,
+  updateProfileKeywords,
   topGenreIds,
   dislikedGenreIds,
   explorationGenreId,
   hasSignal,
+  hydrateTasteProfile,
   type TasteProfile,
 } from "@/lib/recommendations/tasteProfile";
+import { rerankCards } from "@/lib/recommendations/cindrScore";
 
 const GENRE_MAP: Record<number, string> = {
   28: "Action",
@@ -144,6 +149,8 @@ function toCardData(movie: Movie): MovieCardData {
     language: movie.original_language?.toUpperCase() ?? "",
     runtime: movie.runtime,
     media_type: movie.media_type,
+    tmdbPopularity: movie.popularity,
+    voteCount: movie.vote_count,
   };
 }
 
@@ -350,21 +357,61 @@ export default function DiscoverPage() {
       ignoreSwiped = false,
       signal?: AbortSignal
     ) => {
-      const pages = [startPage, startPage + 1, startPage + 2].map(
-        normalizeDiscoverPage
+      const isTasteWithSignal =
+        activePreferences.discoverMode === "taste" &&
+        hasSignal(tasteProfileRef.current);
+
+      // In taste mode with signal: 2 taste pages + 1 quality pool (no genre filter,
+      // high vote_average) — fixes the "shallow puddle" problem.
+      // In random mode or early sessions: 3 taste pages as before.
+      const tastePages = isTasteWithSignal
+        ? [startPage, startPage + 1].map(normalizeDiscoverPage)
+        : [startPage, startPage + 1, startPage + 2].map(normalizeDiscoverPage);
+
+      const tasteFetch = Promise.all(
+        tastePages.map((p) => fetchMovies(p, activePreferences, ignoreSwiped, signal))
       );
-      const batches = await Promise.all(
-        pages.map((pageNum) =>
-          fetchMovies(pageNum, activePreferences, ignoreSwiped, signal)
-        )
-      );
+
+      // Quality discovery pool — runs in parallel, only in taste mode
+      const qualityFetch: Promise<MovieCardData[]> = isTasteWithSignal
+        ? (async () => {
+            try {
+              const profile  = tasteProfileRef.current;
+              const guest    = getGuestState();
+              const qParams  = new URLSearchParams();
+              qParams.set("mode", "taste");
+              qParams.set("voteFloor", Math.max(profile.voteFloor, 7.0).toFixed(1));
+              qParams.set("page", String(Math.floor(Math.random() * 12) + 1));
+              if (activePreferences.contentTypes.length > 0)
+                qParams.set("contentTypes", activePreferences.contentTypes.join(","));
+              if (activePreferences.yearFrom)
+                qParams.set("yearFrom", String(activePreferences.yearFrom));
+              if (activePreferences.yearTo)
+                qParams.set("yearTo", String(activePreferences.yearTo));
+              // Deliberately no genres/moods — quality is the only filter
+              const res = await fetch(`/api/tmdb/discover?${qParams}`, { signal });
+              if (!res.ok) return [];
+              const data = await res.json();
+              const swiped = new Set(ignoreSwiped ? [] : guest.swipedIds);
+              return (data.results as Movie[])
+                .filter((m) => !swiped.has(m.id) && !likedIdsRef.current.has(m.id) && m.poster_path)
+                .map(toCardData);
+            } catch {
+              return [];
+            }
+          })()
+        : Promise.resolve([]);
+
+      const [tasteBatches, qualityCards] = await Promise.all([tasteFetch, qualityFetch]);
+
       const seen = new Set<number>();
-      const deduped = batches.flat().filter((card) => {
+      const deduped = [...tasteBatches.flat(), ...qualityCards].filter((card) => {
         if (seen.has(card.id)) return false;
         seen.add(card.id);
         return true;
       });
-      return shuffleCards(deduped);
+      const shuffled = shuffleCards(deduped);
+      return rerankCards(shuffled, tasteProfileRef.current, activePreferences.discoverMode);
     },
     [fetchMovies]
   );
@@ -402,16 +449,33 @@ export default function DiscoverPage() {
     let cancelled = false;
 
     (async () => {
-      // Load preferences + liked IDs in parallel
-      const [{ preferences: effectivePreferences }, remoteIds] = await Promise.all([
-        getEffectivePreferences(),
-        getLikedTmdbIds(),
-      ]);
+      // Load preferences, liked IDs, and remote taste fingerprint in parallel
+      const [{ preferences: effectivePreferences }, remoteIds, remoteFingerprint] =
+        await Promise.all([
+          getEffectivePreferences(),
+          getLikedTmdbIds(),
+          loadTasteFingerprint(),
+        ]);
       if (cancelled) return;
-      // Merge remote liked IDs into the local set so they're excluded from the feed
+
+      // Merge remote liked IDs into the local set
       if (remoteIds.length > 0) {
         remoteIds.forEach((id) => likedIdsRef.current.add(id));
       }
+
+      // Use remote fingerprint if it has more swipes or is more recent
+      if (remoteFingerprint) {
+        const local = tasteProfileRef.current;
+        if (
+          remoteFingerprint.swipeCount > local.swipeCount ||
+          remoteFingerprint.updatedAt > local.updatedAt
+        ) {
+          const hydrated = hydrateTasteProfile(remoteFingerprint);
+          tasteProfileRef.current = hydrated;
+          saveTasteProfile(hydrated);
+        }
+      }
+
       setPreferences({
         ...DEFAULT_DISCOVER_PREFERENCES,
         ...effectivePreferences,
@@ -594,20 +658,45 @@ export default function DiscoverPage() {
     }
 
     // Update taste profile on every swipe (like or skip)
+    const liked = direction === "right";
     const updatedProfile = updateTasteProfile(
       tasteProfileRef.current,
       {
-        genres: card?.genres ?? [],
-        language: card?.language ?? "en",
-        rating: card?.rating ?? 0,
+        genres:          card?.genres         ?? [],
+        language:        card?.language       ?? "en",
+        rating:          card?.rating         ?? 0,
         id,
-        mediaType: card?.media_type ?? "movie",
-        title: card?.title ?? "",
+        mediaType:       card?.media_type     ?? "movie",
+        title:           card?.title          ?? "",
+        year:            card?.year,
+        tmdbPopularity:  card?.tmdbPopularity,
+        voteCount:       card?.voteCount,
+        runtime:         card?.runtime,
       },
-      direction === "right"
+      liked
     );
     tasteProfileRef.current = updatedProfile;
     saveTasteProfile(updatedProfile);
+    // Persist to Supabase on likes (fire-and-forget)
+    if (liked) {
+      void saveTasteFingerprint(updatedProfile);
+      // Background keyword enrichment — fetch TMDB keywords for liked movie
+      // and update profile keyword weights async (never blocks the swipe)
+      void (async () => {
+        try {
+          const mediaType = card?.media_type ?? "movie";
+          const res = await fetch(`/api/tmdb/keywords?id=${id}&type=${mediaType}`);
+          const data = await res.json();
+          if (data.keywords?.length > 0) {
+            const enriched = updateProfileKeywords(tasteProfileRef.current, data.keywords);
+            tasteProfileRef.current = enriched;
+            saveTasteProfile(enriched);
+          }
+        } catch {
+          // non-critical — silent fail
+        }
+      })();
+    }
 
     // Every 3rd like, inject TMDB recommendations — taste mode only
     if (direction === "right" && preferences.discoverMode === "taste" && updatedProfile.likeCount % 3 === 0 && updatedProfile.likeCount > 0) {

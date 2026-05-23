@@ -74,6 +74,13 @@ export interface MovieCardData {
   media_type?: "movie" | "tv";
   /** Set on TMDB-recommendation-injected cards */
   becauseOf?: string;
+  /** CindrSense fields — populated after scoring */
+  isSuperMatch?: boolean;
+  isDiscovery?: boolean;
+  cindrScore?: number;
+  /** Raw TMDB signals — used by the scoring engine */
+  tmdbPopularity?: number;
+  voteCount?: number;
 }
 
 export const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";

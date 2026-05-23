@@ -4,6 +4,7 @@ import { type FormEvent, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { clearGuestState } from "@/lib/guest/storage";
+import { saveTasteProfile, hydrateTasteProfile } from "@/lib/recommendations/tasteProfile";
 import {
   ensureProfileFromAuth,
   getProfileDashboardData,
@@ -35,6 +36,7 @@ export default function ProfilePage() {
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [feedbackStatus, setFeedbackStatus] = useState("");
+  const [clearTasteOpen, setClearTasteOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -67,6 +69,20 @@ export default function ProfilePage() {
     await supabase.auth.signOut();
     clearGuestState();
     router.push("/");
+  }
+
+  async function handleClearTaste() {
+    const reset = hydrateTasteProfile({ swipeCount: 0, likeCount: 0, updatedAt: Date.now() });
+    saveTasteProfile(reset);
+    // Also wipe from Supabase if logged in
+    try {
+      const { data: { user: u } } = await supabase.auth.getUser();
+      if (u) {
+        await supabase.from("taste_fingerprints")
+          .upsert({ user_id: u.id, fingerprint: reset, swipe_count: 0, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+      }
+    } catch { /* non-critical */ }
+    setClearTasteOpen(false);
   }
 
   function setLocalAvatarPreview(file: File) {
@@ -456,6 +472,14 @@ export default function ProfilePage() {
 
         <div className="flex flex-col gap-2">
           <button
+            type="button"
+            onClick={() => setClearTasteOpen(true)}
+            className="w-full p-4 rounded-xl border border-white/8 text-white/50 text-sm font-medium hover:bg-white/[0.04] hover:text-white/70 transition-colors text-left flex items-center gap-2.5"
+          >
+            <Trash size={15} className="shrink-0 opacity-60" />
+            Clear taste history
+          </button>
+          <button
             onClick={handleSignOut}
             className="w-full p-4 rounded-xl border border-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/5 transition-colors text-left"
           >
@@ -464,6 +488,36 @@ export default function ProfilePage() {
         </div>
         </div>
       </main>
+      {clearTasteOpen && (
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 px-4 pb-6 sm:pb-0 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#111015] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
+            <div className="mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06]">
+              <Trash size={18} className="text-white/60" />
+            </div>
+            <h2 className="mt-3 text-base font-semibold text-white">Clear taste history?</h2>
+            <p className="mt-1.5 text-sm text-white/50 leading-relaxed">
+              This resets everything Cindr has learned from your swipes — genres, vibes, keywords, mood. Your watchlist and liked films are not affected. This cannot be undone.
+            </p>
+            <div className="mt-5 flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => setClearTasteOpen(false)}
+                className="flex-1 rounded-xl border border-white/10 py-2.5 text-sm font-medium text-white/65 transition-colors hover:bg-white/[0.05] hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleClearTaste}
+                className="flex-1 rounded-xl bg-white/[0.08] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.14]"
+              >
+                Yes, clear it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {feedbackOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4 py-8 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#111015] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
