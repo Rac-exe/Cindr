@@ -195,7 +195,7 @@ export function computeCardTone(genres: string[]): ToneWeights {
     const mapping = GENRE_TONE_MAP[genre];
     if (!mapping) continue;
     for (const [k, v] of Object.entries(mapping)) {
-      (tone as Record<string, number>)[k] += v as number;
+      (tone as unknown as Record<string, number>)[k] += v as number;
     }
   }
   // Normalize by genre count so multi-genre films don't score higher
