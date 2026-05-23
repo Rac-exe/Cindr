@@ -8,6 +8,7 @@ import { saveTasteProfile, hydrateTasteProfile } from "@/lib/recommendations/tas
 import {
   ensureProfileFromAuth,
   getProfileDashboardData,
+  saveTasteFingerprint,
   submitFeedbackReport,
   updateProfileAvatar,
 } from "@/lib/supabase/core";
@@ -74,14 +75,7 @@ export default function ProfilePage() {
   async function handleClearTaste() {
     const reset = hydrateTasteProfile({ swipeCount: 0, likeCount: 0, updatedAt: Date.now() });
     saveTasteProfile(reset);
-    // Also wipe from Supabase if logged in
-    try {
-      const { data: { user: u } } = await supabase.auth.getUser();
-      if (u) {
-        await supabase.from("taste_fingerprints")
-          .upsert({ user_id: u.id, fingerprint: reset, swipe_count: 0, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
-      }
-    } catch { /* non-critical */ }
+    await saveTasteFingerprint(reset);
     setClearTasteOpen(false);
   }
 
@@ -431,10 +425,9 @@ export default function ProfilePage() {
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <span className="text-sm text-[var(--muted)]">Library</span>
-            <div className="mt-3 grid grid-cols-5 gap-2 text-center">
+            <div className="mt-3 grid grid-cols-4 gap-2 text-center">
               {[
                 ["Liked", dashboard?.library.liked ?? 0],
-                ["List", dashboard?.library.watchlisted ?? 0],
                 ["Fav", dashboard?.library.favourite ?? 0],
                 ["Seen", dashboard?.library.watched ?? 0],
                 ["Rated", dashboard?.library.rated ?? 0],
@@ -494,7 +487,7 @@ export default function ProfilePage() {
             </div>
             <h2 className="mt-3 text-base font-semibold text-white">Clear taste history?</h2>
             <p className="mt-1.5 text-sm text-white/50 leading-relaxed">
-              This resets everything Cindr has learned from your swipes — genres, vibes, keywords, mood. Your watchlist and liked films are not affected. This cannot be undone.
+              This resets everything Cindr has learned from your swipes — genres, vibes, keywords, mood. Your liked films and saved activity are not affected. This cannot be undone.
             </p>
             <div className="mt-5 flex gap-2.5">
               <button

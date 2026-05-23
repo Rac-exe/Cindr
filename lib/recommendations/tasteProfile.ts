@@ -13,8 +13,6 @@
  * Exploration injection: every 7th batch uses a stretch genre to prevent echo chambers.
  */
 
-const STORAGE_KEY = "cindr_taste_v2";
-
 const LIKE_DELTA = 0.25;
 const SKIP_DELTA = 0.12;
 const DECAY      = 0.97;
@@ -161,26 +159,13 @@ function hydrate(raw: Partial<TasteProfile>): TasteProfile {
 }
 
 export function loadTasteProfile(): TasteProfile {
-  if (typeof window === "undefined") return blank();
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return hydrate(JSON.parse(raw) as Partial<TasteProfile>);
-    // Migrate from old v1 key
-    const oldRaw = localStorage.getItem("cindr_taste_v1");
-    if (oldRaw) return hydrate(JSON.parse(oldRaw) as Partial<TasteProfile>);
-  } catch {
-    // ignore
-  }
   return blank();
 }
 
-export function saveTasteProfile(p: TasteProfile): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
-  } catch {
-    // quota — non-fatal
-  }
+export function saveTasteProfile(profile: TasteProfile): void {
+  void profile;
+  // The active taste profile lives in memory during discovery and is persisted
+  // through lib/supabase/core.ts for signed-in users.
 }
 
 function clamp(v: number, lo: number, hi: number) {

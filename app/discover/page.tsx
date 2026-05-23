@@ -786,9 +786,9 @@ export default function DiscoverPage() {
     );
     tasteProfileRef.current = updatedProfile;
     saveTasteProfile(updatedProfile);
-    // Persist to Supabase on likes (fire-and-forget)
+    void saveTasteFingerprint(updatedProfile);
+
     if (liked) {
-      void saveTasteFingerprint(updatedProfile);
       // Background keyword enrichment — fetch TMDB keywords for liked movie
       // and update profile keyword weights async (never blocks the swipe)
       void (async () => {
@@ -800,6 +800,7 @@ export default function DiscoverPage() {
             const enriched = updateProfileKeywords(tasteProfileRef.current, data.keywords);
             tasteProfileRef.current = enriched;
             saveTasteProfile(enriched);
+            void saveTasteFingerprint(enriched);
           }
         } catch {
           // non-critical — silent fail

@@ -28,7 +28,7 @@ export interface PendingGuestInteraction {
   title: string;
   poster_path: string | null;
   patch: Partial<
-    Pick<SavedMovie, "liked" | "watchlisted" | "favourite" | "watched" | "rating">
+    Pick<SavedMovie, "liked" | "favourite" | "watched" | "rating">
   >;
 }
 
@@ -96,7 +96,6 @@ export interface SavedMovie {
   poster_path: string | null;
   status: SavedMovieStatus | null;
   liked: boolean;
-  watchlisted: boolean;
   favourite: boolean;
   watched: boolean;
   rating: number | null;
@@ -123,7 +122,6 @@ export interface ProfileDashboardData {
   };
   library: {
     liked: number;
-    watchlisted: number;
     favourite: number;
     watched: number;
     rated: number;

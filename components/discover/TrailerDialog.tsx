@@ -35,7 +35,7 @@ interface TrailerDialogProps {
   discoverMode?: "taste" | "random";
   preview?: MovieCardData;
   initialInteraction?: InteractionFlags;
-  sourceList?: "liked" | "watchlisted" | "favourite" | "watched";
+  sourceList?: "liked" | "favourite" | "watched";
   onInteractionChange?: (interaction: SavedMovie) => void;
   onSwipeDecision?: (direction: "left" | "right") => void;
   onClose: () => void;
@@ -43,7 +43,7 @@ interface TrailerDialogProps {
 
 type TrailerStatus = "loading" | "ready" | "no_trailer" | "error";
 type InteractionFlags = Partial<
-  Pick<SavedMovie, "liked" | "watchlisted" | "favourite" | "watched" | "rating">
+  Pick<SavedMovie, "liked" | "favourite" | "watched" | "rating">
 >;
 
 function OverviewText({ text }: { text: string }) {
@@ -232,7 +232,7 @@ export default function TrailerDialog({
 
   async function patchCurrentInteraction(
     patch: Partial<
-      Pick<SavedMovie, "liked" | "watchlisted" | "favourite" | "watched" | "rating">
+      Pick<SavedMovie, "liked" | "favourite" | "watched" | "rating">
     >
   ) {
     const userId = await getCurrentUserId();
@@ -245,9 +245,7 @@ export default function TrailerDialog({
         patch,
       });
       setOptimisticInteraction({ ...(activeInteraction ?? {}), ...patch });
-      router.push(
-        patch.watchlisted ? "/auth/signup?returnTo=/watchlist" : "/auth/signup?returnTo=/discover"
-      );
+      router.push("/auth/signup?returnTo=/discover");
       return;
     }
     setSaving(true);
@@ -499,7 +497,7 @@ export default function TrailerDialog({
                   <button disabled={saving} onClick={() => patchCurrentInteraction({ favourite: !activeInteraction?.favourite })} aria-label={activeInteraction?.favourite ? "Remove favourite" : "Add favourite"} className={`grid h-12 place-items-center rounded-xl border transition-colors disabled:opacity-50 ${activeInteraction?.favourite ? "border-red-400/55 bg-red-500/14 text-red-200" : "border-[var(--border-color)] text-white/75 hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-100"}`}>
                     <Star size={20} weight={activeInteraction?.favourite ? "fill" : "regular"} />
                   </button>
-                  <button disabled={saving} onClick={() => patchCurrentInteraction({ watched: !activeInteraction?.watched, watchlisted: activeInteraction?.watched ? activeInteraction.watchlisted : false })} aria-label={activeInteraction?.watched ? "Mark as unwatched" : "Mark as watched"} className={`grid h-12 place-items-center rounded-xl border transition-colors disabled:opacity-50 ${activeInteraction?.watched ? "border-red-400/55 bg-red-500/14 text-red-200" : "border-[var(--border-color)] text-white/75 hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-100"}`}>
+                  <button disabled={saving} onClick={() => patchCurrentInteraction({ watched: !activeInteraction?.watched })} aria-label={activeInteraction?.watched ? "Mark as unwatched" : "Mark as watched"} className={`grid h-12 place-items-center rounded-xl border transition-colors disabled:opacity-50 ${activeInteraction?.watched ? "border-red-400/55 bg-red-500/14 text-red-200" : "border-[var(--border-color)] text-white/75 hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-100"}`}>
                     <Eye size={20} weight={activeInteraction?.watched ? "fill" : "regular"} />
                   </button>
                   <button disabled={saving} onClick={() => patchCurrentInteraction({ liked: !activeInteraction?.liked })} aria-label={activeInteraction?.liked ? "Unlike" : "Like"} className={`grid h-12 place-items-center rounded-xl border transition-colors disabled:opacity-50 ${activeInteraction?.liked ? "border-red-400/55 bg-red-500/14 text-red-200" : "border-[var(--border-color)] text-white/75 hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-100"}`}>
