@@ -1,0 +1,6 @@
+# Showcase repo — no app source code here
+node_modules/
+.DS_Store
+Thumbs.db
+*.env
+*.env.local

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cindr — Swipe for movies, not dates</title>
+  <meta name="description" content="Instead of swiping for dates, you swipe for movies. Cindr is a taste-led movie discovery app." />
+  <meta property="og:title" content="Cindr" />
+  <meta property="og:description" content="Instead of swiping for dates, you swipe for movies." />
+  <meta property="og:url" content="https://mrraccooon.github.io/Cindr" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav" id="nav">
+    <span class="nav-logo">Cindr</span>
+    <a href="https://cindr-red.vercel.app" class="btn btn-primary btn-sm" target="_blank" rel="noopener">Open App</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+
+    <div class="hero-content">
+      <div class="hero-badge" id="badge">
+        <span class="badge-dot"></span>
+        Live now — no sign-up required
+      </div>
+
+      <h1 class="hero-title" id="hero-title">
+        <span class="line" id="line1">Instead of swiping</span>
+        <span class="line line-accent" id="line2">for dates,</span>
+        <span class="line" id="line3">you swipe for movies.</span>
+      </h1>
+
+      <p class="hero-sub" id="hero-sub">
+        Taste-led movie discovery. Swipe left to skip, right to like, up to watch the trailer.
+        The more you swipe, the smarter it gets.
+      </p>
+
+      <div class="hero-actions" id="hero-actions">
+        <a href="https://cindr-red.vercel.app" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
+          Open Cindr &rarr;
+        </a>
+        <a href="#how-it-works" class="btn btn-ghost btn-lg">How it works</a>
+      </div>
+    </div>
+
+    <!-- Swipe demo card -->
+    <div class="card-demo" id="card-demo">
+      <div class="demo-card" id="demo-card">
+        <div class="demo-card-inner">
+          <div class="demo-card-gradient"></div>
+          <div class="demo-card-info">
+            <div class="demo-card-genre">Action · Thriller</div>
+            <div class="demo-card-title">Your next favourite film</div>
+            <div class="demo-card-meta">2024 &nbsp;·&nbsp; 2h 14m &nbsp;·&nbsp; ★ 8.1</div>
+          </div>
+        </div>
+        <div class="demo-like-stamp" id="stamp-like">LIKE</div>
+        <div class="demo-skip-stamp" id="stamp-skip">SKIP</div>
+        <div class="demo-trailer-stamp" id="stamp-trailer">TRAILER ↑</div>
+      </div>
+      <div class="demo-actions">
+        <div class="demo-btn demo-btn-skip" id="btn-skip">&#x2715;</div>
+        <div class="demo-btn demo-btn-trailer" id="btn-trailer">&#9654; Trailer</div>
+        <div class="demo-btn demo-btn-like" id="btn-like">&#x2665;</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="section" id="how-it-works">
+    <div class="container">
+      <div class="section-label">How it works</div>
+      <h2 class="section-title">Three gestures. Infinite movies.</h2>
+      <div class="steps">
+        <div class="step" data-animate>
+          <div class="step-icon step-icon-skip">&#8592;</div>
+          <h3>Swipe left</h3>
+          <p>Skip a movie. Never see it again in this session.</p>
+        </div>
+        <div class="step" data-animate>
+          <div class="step-icon step-icon-like">&#8594;</div>
+          <h3>Swipe right</h3>
+          <p>Like it. Saved to your list and teaches CindrSense your taste.</p>
+        </div>
+        <div class="step" data-animate>
+          <div class="step-icon step-icon-trailer">&#8593;</div>
+          <h3>Swipe up</h3>
+          <p>Watch the trailer inline — without leaving your discovery feed.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CindrSense -->
+  <section class="section section-dark" id="sense">
+    <div class="container">
+      <div class="section-label">CindrSense</div>
+      <h2 class="section-title">Gets smarter with every swipe.</h2>
+      <p class="section-body">
+        CindrSense tracks your taste across genres, mood, era, language, and even keywords from films you like.
+        It applies exponential decay so recent swipes always matter more — your feed never goes stale.
+        Toggle to <strong>Random</strong> any time to escape the algorithm entirely.
+      </p>
+      <div class="sense-tags" data-animate>
+        <span class="tag">Action</span>
+        <span class="tag">Thriller</span>
+        <span class="tag tag-fading">Romance</span>
+        <span class="tag">Sci-Fi</span>
+        <span class="tag tag-fading">Horror</span>
+        <span class="tag">Crime</span>
+        <span class="tag tag-glow">Recommended for you</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section cta-section">
+    <div class="container cta-container">
+      <h2 class="cta-title">Ready to find your next film?</h2>
+      <p class="cta-sub">No account. No app store. Just open it and swipe.</p>
+      <a href="https://cindr-red.vercel.app" class="btn btn-primary btn-xl" target="_blank" rel="noopener">
+        Open Cindr &rarr;
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <span class="footer-logo">Cindr</span>
+      <div class="footer-links">
+        <a href="docs/privacy.html">Privacy</a>
+        <a href="https://github.com/MrRaccooon/Cindr">GitHub</a>
+        <a href="https://cindr-red.vercel.app">App</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
