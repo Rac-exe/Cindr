@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { type CSSProperties, useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   getGuestState,
@@ -10,6 +10,7 @@ import {
   queuePendingInteraction,
   savePreferences,
   addLikedId,
+  removeLikedId,
   getLikedIds,
 } from "@/lib/guest/storage";
 import {
@@ -92,6 +93,16 @@ type DiscoverBatchResult = {
   lastFetchedPage: number;
 };
 
+type CachedDiscoverDeck = {
+  cards: MovieCardData[];
+  page: number;
+};
+
+type LastSwipe = {
+  card: MovieCardData;
+  direction: "left" | "right";
+};
+
 const DEFAULT_DISCOVER_PREFERENCES: UserPreferences = {
   languages: [],
   genres: [],
@@ -167,7 +178,7 @@ function PosterSkeleton({ message }: { message: string }) {
             />
           ))}
         </div>
-        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.25s_infinite] bg-gradient-to-r from-transparent via-white/12 to-transparent" />
+        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_ease-out_infinite] bg-gradient-to-r from-transparent via-white/8 to-transparent" />
         <div className="absolute inset-x-12 top-1/2 h-20 -translate-y-1/2 rounded-full bg-[var(--color-cindr)]/8 blur-2xl" />
         <div className="absolute inset-0 rounded-[1.75rem] ring-1 ring-inset ring-white/10" />
         <div className="absolute bottom-6 left-6 right-6 space-y-3">
@@ -213,7 +224,9 @@ function ModeToggle({
             onMouseLeave={() => setHovered(null)}
             className={`rounded-full px-2.5 py-1.5 text-[10px] font-bold capitalize leading-none tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
               mode === m
-                ? "bg-[var(--color-cindr)] text-white shadow-[0_0_18px_rgba(216,90,48,0.28)]"
+                ? m === "random"
+                  ? "bg-white/88 text-zinc-950 shadow-[0_12px_30px_rgba(226,232,240,0.12)]"
+                  : "bg-[var(--color-cindr)] text-white shadow-[0_12px_30px_rgba(216,90,48,0.16)]"
                 : "text-white/48 hover:bg-white/[0.05] hover:text-white"
             }`}
           >
@@ -236,6 +249,8 @@ export default function DiscoverPage() {
   const [preferences, setPreferences] = useState<UserPreferences>(
     DEFAULT_DISCOVER_PREFERENCES
   );
+  const [modeTransitionNonce, setModeTransitionNonce] = useState(0);
+  const [modeSwitching, setModeSwitching] = useState(false);
   const [preferencesReady, setPreferencesReady] = useState(false);
   const [cards, setCards] = useState<MovieCardData[]>([]);
   const [page, setPage] = useState(1);
@@ -247,10 +262,9 @@ export default function DiscoverPage() {
     preview: MovieCardData;
     initialInteraction?: { liked: boolean };
   } | null>(null);
-  const [lastSwipe, setLastSwipe] = useState<{
-    card: MovieCardData;
-    direction: "left" | "right";
-  } | null>(null);
+  const [lastSwipeByMode, setLastSwipeByMode] = useState<
+    Partial<Record<DiscoverMode, LastSwipe>>
+  >({});
   const emptyRetryCount = useRef(0);
   const tasteProfileRef = useRef<TasteProfile>(loadTasteProfile());
   const fetchCountRef = useRef(0);
@@ -263,6 +277,20 @@ export default function DiscoverPage() {
   const swipeNonce = useRef(0);
   const modalHistoryPushed = useRef(false);
   const isLoadingMoreRef = useRef(false);
+  const modeDeckCacheRef = useRef<Partial<Record<DiscoverMode, CachedDiscoverDeck>>>({});
+  const prefetchingModesRef = useRef<Set<DiscoverMode>>(new Set());
+  const skipNextForegroundFetchRef = useRef<DiscoverMode | null>(null);
+  const isRandomMode = preferences.discoverMode === "random";
+  const currentLastSwipe = lastSwipeByMode[preferences.discoverMode] ?? null;
+  const themeStyle = {
+    "--theme-accent": isRandomMode ? "#E5E7EB" : "var(--color-cindr)",
+    "--theme-accent-soft": isRandomMode
+      ? "rgba(226,232,240,0.14)"
+      : "rgba(216,90,48,0.16)",
+    "--theme-accent-shadow": isRandomMode
+      ? "rgba(226,232,240,0.12)"
+      : "rgba(216,90,48,0.18)",
+  } as CSSProperties;
 
   const fetchMovies = useCallback(async (
     pageNum: number,
@@ -445,6 +473,20 @@ export default function DiscoverPage() {
     [fetchBatch]
   );
 
+  const cacheDeck = useCallback(
+    (mode: DiscoverMode, nextCards: MovieCardData[], nextPage: number) => {
+      if (nextCards.length === 0) {
+        delete modeDeckCacheRef.current[mode];
+        return;
+      }
+      modeDeckCacheRef.current[mode] = {
+        cards: nextCards,
+        page: nextPage,
+      };
+    },
+    []
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -490,6 +532,11 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     if (!preferencesReady) return;
+    if (skipNextForegroundFetchRef.current === preferences.discoverMode) {
+      skipNextForegroundFetchRef.current = null;
+      setLoading(false);
+      return;
+    }
 
     const controller = new AbortController();
 
@@ -538,13 +585,51 @@ export default function DiscoverPage() {
       }
 
       if (controller.signal.aborted) return;
+      cacheDeck(preferences.discoverMode, batch.cards, batch.lastFetchedPage);
       setCards(batch.cards);
       setPage(batch.lastFetchedPage);
       setLoading(false);
     })();
 
     return () => controller.abort();
-  }, [fetchFirstAvailableBatch, preferences, preferencesReady]);
+  }, [cacheDeck, fetchFirstAvailableBatch, preferences, preferencesReady]);
+
+  useEffect(() => {
+    if (!preferencesReady) return;
+
+    const inactiveMode: DiscoverMode =
+      preferences.discoverMode === "taste" ? "random" : "taste";
+    if (prefetchingModesRef.current.has(inactiveMode)) return;
+
+    const controller = new AbortController();
+    prefetchingModesRef.current.add(inactiveMode);
+
+    (async () => {
+      try {
+        const inactivePreferences = {
+          ...preferences,
+          discoverMode: inactiveMode,
+        };
+        const startPages =
+          inactiveMode === "random"
+            ? randomDiscoverPages(Math.max(2, INITIAL_RANDOM_BATCH_RETRIES))
+            : [1];
+        const batch = await fetchFirstAvailableBatch(
+          startPages,
+          inactivePreferences,
+          false,
+          controller.signal
+        );
+        if (!controller.signal.aborted) {
+          cacheDeck(inactiveMode, batch.cards, batch.lastFetchedPage);
+        }
+      } finally {
+        prefetchingModesRef.current.delete(inactiveMode);
+      }
+    })();
+
+    return () => controller.abort();
+  }, [cacheDeck, fetchFirstAvailableBatch, preferences, preferencesReady]);
 
   const reshuffleDeck = useCallback(async () => {
     setLoading(true);
@@ -593,8 +678,9 @@ export default function DiscoverPage() {
 
     setCards(batch.cards);
     setPage(batch.lastFetchedPage);
+    cacheDeck(preferences.discoverMode, batch.cards, batch.lastFetchedPage);
     setLoading(false);
-  }, [fetchFirstAvailableBatch, page, preferences]);
+  }, [cacheDeck, fetchFirstAvailableBatch, page, preferences]);
 
   async function loadMore(randomize = false) {
     if (isLoadingMoreRef.current) return;
@@ -610,7 +696,9 @@ export default function DiscoverPage() {
           seen.add(card.id);
           return true;
         });
-        return [...prev, ...uniqueNewCards];
+        const nextCards = [...prev, ...uniqueNewCards];
+        cacheDeck(preferences.discoverMode, nextCards, normalizeDiscoverPage(nextPage + 2));
+        return nextCards;
       });
     } finally {
       isLoadingMoreRef.current = false;
@@ -618,43 +706,64 @@ export default function DiscoverPage() {
   }
 
   async function handleModeChange(nextMode: DiscoverMode) {
-    if (nextMode === preferences.discoverMode) return;
+    if (nextMode === preferences.discoverMode || modeSwitching) return;
 
     emptyRetryCount.current = 0;
     const nextPreferences = {
       ...preferences,
       discoverMode: nextMode,
     };
-    setPreferences(nextPreferences);
-    setLastSwipe(null);
-    setPage(1);
-    setMessage(findingMessage(nextMode));
-    savePreferences({ discoverMode: nextMode });
+    const shouldFlipCurrentCard = cards.length > 0 && !selectedMovie;
+    setModeSwitching(true);
+    try {
+      if (shouldFlipCurrentCard) {
+        setModeTransitionNonce((current) => current + 1);
+        await new Promise((resolve) => window.setTimeout(resolve, 380));
+      }
+      const cachedDeck = modeDeckCacheRef.current[nextMode];
+      setPreferences(nextPreferences);
+      if (cachedDeck?.cards.length) {
+        skipNextForegroundFetchRef.current = nextMode;
+        setCards(cachedDeck.cards);
+        setPage(cachedDeck.page);
+        setLoading(false);
+      } else {
+        setPage(1);
+      }
+      setMessage(findingMessage(nextMode));
+      savePreferences({ discoverMode: nextMode });
 
-    const userId = await getCurrentUserId();
-    if (userId) {
-      await upsertPreferences({ discoverMode: nextMode });
+      const userId = await getCurrentUserId();
+      if (userId) {
+        await upsertPreferences({ discoverMode: nextMode });
+      }
+    } finally {
+      setModeSwitching(false);
     }
   }
 
-  function openTrailerDialog(movieSelection: {
+  const openTrailerDialog = useCallback((movieSelection: {
     id: number;
     mediaType: "movie" | "tv";
     preview: MovieCardData;
     initialInteraction?: { liked: boolean };
-  }) {
+  }) => {
     if (!modalHistoryPushed.current) {
       window.history.pushState({ cindrTrailer: true }, "", window.location.href);
       modalHistoryPushed.current = true;
     }
     setSelectedMovie(movieSelection);
-  }
+  }, []);
 
   function handleSwipeStart(id: number, direction: "left" | "right") {
     addSwipedId(id);
     const card = cards.find((c) => c.id === id);
     if (card) {
-      setLastSwipe({ card, direction });
+      const activeMode = preferences.discoverMode;
+      setLastSwipeByMode((current) => ({
+        ...current,
+        [activeMode]: { card, direction },
+      }));
     }
 
     // Update taste profile on every swipe (like or skip)
@@ -758,7 +867,7 @@ export default function DiscoverPage() {
     }
   }
 
-  function openCurrentTrailer() {
+  const openCurrentTrailer = useCallback(() => {
     const topCard = cards[0];
     if (!topCard || selectedMovie) return;
     openTrailerDialog({
@@ -766,11 +875,15 @@ export default function DiscoverPage() {
       mediaType: topCard.media_type ?? "movie",
       preview: topCard,
     });
-  }
+  }, [cards, openTrailerDialog, selectedMovie]);
 
   function handleSwipe(id: number) {
     setSwipeRequest(undefined);
-    setCards((prev) => prev.filter((c) => c.id !== id));
+    setCards((prev) => {
+      const nextCards = prev.filter((c) => c.id !== id);
+      cacheDeck(preferences.discoverMode, nextCards, page);
+      return nextCards;
+    });
 
     const remainingCards = cards.length - 1;
     if (remainingCards <= 0) {
@@ -789,11 +902,20 @@ export default function DiscoverPage() {
   }, [cards]);
 
   function undoLastSwipe() {
+    const lastSwipe = currentLastSwipe;
     if (!lastSwipe) return;
+    const activeMode = preferences.discoverMode;
     removeSwipedId(lastSwipe.card.id);
+    if (lastSwipe.direction === "right") {
+      likedIdsRef.current.delete(lastSwipe.card.id);
+      removeLikedId(lastSwipe.card.id);
+    }
     setCards((prev) => {
-      if (prev.some((card) => card.id === lastSwipe.card.id)) return prev;
-      return [lastSwipe.card, ...prev];
+      const nextCards = prev.some((card) => card.id === lastSwipe.card.id)
+        ? prev
+        : [lastSwipe.card, ...prev];
+      cacheDeck(preferences.discoverMode, nextCards, page);
+      return nextCards;
     });
 
     if (lastSwipe.direction === "right") {
@@ -808,7 +930,11 @@ export default function DiscoverPage() {
       );
     }
 
-    setLastSwipe(null);
+    setLastSwipeByMode((current) => {
+      const next = { ...current };
+      delete next[activeMode];
+      return next;
+    });
   }
 
   useEffect(() => {
@@ -865,6 +991,18 @@ export default function DiscoverPage() {
     setSelectedMovie(null);
   }
 
+  function handleTrailerSwipeDecision(direction: "left" | "right") {
+    const movie = selectedMovie;
+    if (!movie) return;
+    if (modalHistoryPushed.current) {
+      modalHistoryPushed.current = false;
+      window.history.back();
+    }
+    setSelectedMovie(null);
+    handleSwipeStart(movie.id, direction);
+    window.setTimeout(() => handleSwipe(movie.id), 140);
+  }
+
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape" && selectedMovie) {
@@ -886,24 +1024,29 @@ export default function DiscoverPage() {
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [cards, requestKeyboardSwipe, selectedMovie]);
+  }, [cards, openCurrentTrailer, requestKeyboardSwipe, selectedMovie]);
 
   return (
-    <div className="relative flex h-[100svh] min-h-[100svh] flex-col overflow-hidden md:h-[100dvh] md:min-h-[100dvh]">
-      <CinematicBackdrop density="subtle" />
+    <div
+      className="relative flex h-[100svh] min-h-[100svh] flex-col overflow-hidden md:h-[100dvh] md:min-h-[100dvh]"
+      style={themeStyle}
+    >
+      <CinematicBackdrop density="subtle" mode={preferences.discoverMode} />
       <AppHeader />
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col items-center overflow-hidden px-3 pb-[env(safe-area-inset-bottom)] pt-[4.65rem] sm:px-4 md:pt-16">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col items-center overflow-hidden px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-[5.75rem] sm:px-4 md:pt-[5.75rem]">
         <ModeToggle
           mode={preferences.discoverMode}
-          disabled={!preferencesReady}
+          disabled={!preferencesReady || modeSwitching}
           onChange={handleModeChange}
         />
         <AnimatePresence mode="wait">
           {cards.length > 0 ? (
             <motion.div
               key="deck"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
               className="flex-1 min-h-0 w-full"
             >
               <SwipeDeck
@@ -914,8 +1057,9 @@ export default function DiscoverPage() {
                 onOpenTrailer={openCurrentTrailer}
                 trailerOpen={!!selectedMovie}
                 discoverMode={preferences.discoverMode}
+                modeTransitionNonce={modeTransitionNonce}
                 onUndo={undoLastSwipe}
-                canUndo={!!lastSwipe && !selectedMovie}
+                canUndo={!!currentLastSwipe && !selectedMovie}
               />
             </motion.div>
           ) : (
@@ -924,6 +1068,7 @@ export default function DiscoverPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col items-center gap-4"
             >
               <PosterSkeleton message={message} />
@@ -936,8 +1081,10 @@ export default function DiscoverPage() {
           key={`${selectedMovie.mediaType}-${selectedMovie.id}`}
           movieId={selectedMovie.id}
           mediaType={selectedMovie.mediaType}
+          discoverMode={preferences.discoverMode}
           preview={selectedMovie.preview}
           initialInteraction={selectedMovie.initialInteraction}
+          onSwipeDecision={handleTrailerSwipeDecision}
           onClose={closeTrailerDialog}
         />
       )}

@@ -19,6 +19,27 @@ import { clearGuestState } from "@/lib/guest/storage";
 import { supabase } from "@/lib/supabase/client";
 import type { FeedbackCategory } from "@/types/user";
 
+function navWrapClass(mobile = false) {
+  const display = mobile ? "flex xl:hidden" : "hidden xl:flex";
+  return `${display} items-center gap-2`;
+}
+
+function navItemClass(active: boolean, square = false) {
+  const size = square ? "h-10 w-10 justify-center px-0" : "h-10 gap-2 px-3";
+  const base = `nav-motion-target inline-flex items-center rounded-xl text-sm font-medium transition-colors ${size}`;
+  return `${base} rounded-none border-b-2 ${
+    active
+      ? "border-[var(--theme-accent)] text-white"
+      : "border-transparent text-white/55 hover:text-white"
+  }`;
+}
+
+function navIconClass(active: boolean) {
+  return active
+    ? "nav-motion-icon text-[var(--theme-accent)]"
+    : "nav-motion-icon";
+}
+
 export default function AppHeader() {
   const pathname = usePathname();
   const isLanding = pathname === "/";
@@ -96,13 +117,13 @@ export default function AppHeader() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-[var(--background)]/80 backdrop-blur-lg border-b border-[var(--border-color)] md:px-5 md:py-4">
+      <header className="fixed left-0 right-0 top-0 z-50 flex min-h-14 items-center justify-between border-b border-white/10 bg-[#09090c]/76 px-4 py-2 shadow-none backdrop-blur-xl md:px-6">
         <Link href="/" className="flex items-center" aria-label="Cindr home">
           <CindrLogo markClassName="h-8 w-8" textClassName="text-xl" />
         </Link>
 
         {!isLanding && (
-          <nav className="hidden items-center gap-1 lg:flex">
+          <nav className={navWrapClass()}>
           <NavLink
             href="/discover"
             label="Discover"
@@ -113,27 +134,19 @@ export default function AppHeader() {
             <button
               type="button"
               onClick={() => setPrefsOpen((current) => !current)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                pathname.startsWith("/onboarding")
-                  ? "text-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
-                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
+              className={navItemClass(pathname.startsWith("/onboarding"))}
               aria-expanded={prefsOpen}
               aria-haspopup="menu"
             >
               <SlidersHorizontal
-                size={16}
+                size={18}
                 weight={pathname.startsWith("/onboarding") ? "fill" : "regular"}
-                className={
-                  pathname.startsWith("/onboarding")
-                    ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.55)]"
-                    : ""
-                }
+                className={navIconClass(pathname.startsWith("/onboarding"))}
               />
               Preferences
             </button>
             {prefsOpen && (
-              <div className="absolute right-0 top-[2.35rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
+              <div className="absolute right-0 top-[3rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-xl">
                 <Link
                   href="/onboarding?mode=quiz"
                   onClick={() => setPrefsOpen(false)}
@@ -171,27 +184,19 @@ export default function AppHeader() {
             <button
               type="button"
               onClick={() => setProfileOpen((current) => !current)}
-              className={`grid h-9 w-9 place-items-center rounded-lg text-sm transition-colors ${
-                pathname.startsWith("/profile")
-                  ? "text-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
-                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
+              className={navItemClass(pathname.startsWith("/profile"), true)}
               aria-label="Open profile menu"
               aria-expanded={profileOpen}
               aria-haspopup="menu"
             >
               <UserCircle
-                size={22}
+                size={20}
                 weight={pathname.startsWith("/profile") ? "fill" : "regular"}
-                className={
-                  pathname.startsWith("/profile")
-                    ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.55)]"
-                    : ""
-                }
+                className={navIconClass(pathname.startsWith("/profile"))}
               />
             </button>
             {profileOpen && (
-              <div className="absolute right-0 top-[2.35rem] w-56 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
+              <div className="absolute right-0 top-[3rem] w-56 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-xl">
                 <Link
                   href="/profile"
                   onClick={() => setProfileOpen(false)}
@@ -232,24 +237,16 @@ export default function AppHeader() {
           </nav>
         )}
         {!isLanding && (
-          <nav className="flex items-center gap-1.5 lg:hidden" aria-label="Mobile navigation">
+          <nav className={navWrapClass(true)} aria-label="Mobile navigation">
             <Link
               href="/discover"
-              className={`grid h-9 w-9 place-items-center rounded-xl transition-colors ${
-                pathname.startsWith("/discover")
-                  ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)]"
-                  : "text-[var(--muted)] hover:bg-white/[0.06] hover:text-white"
-              }`}
+              className={navItemClass(pathname.startsWith("/discover"), true)}
               aria-label="Discover"
             >
               <FilmSlate
                 size={20}
                 weight={pathname.startsWith("/discover") ? "fill" : "regular"}
-                className={
-                  pathname.startsWith("/discover")
-                    ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]"
-                    : ""
-                }
+                className={navIconClass(pathname.startsWith("/discover"))}
               />
             </Link>
 
@@ -260,11 +257,7 @@ export default function AppHeader() {
                   setPrefsOpen((current) => !current);
                   setProfileOpen(false);
                 }}
-                className={`grid h-9 w-9 place-items-center rounded-xl transition-colors ${
-                  pathname.startsWith("/onboarding")
-                    ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)]"
-                    : "text-[var(--muted)] hover:bg-white/[0.06] hover:text-white"
-                }`}
+                className={navItemClass(pathname.startsWith("/onboarding"), true)}
                 aria-label="Open preferences menu"
                 aria-expanded={prefsOpen}
                 aria-haspopup="menu"
@@ -272,15 +265,11 @@ export default function AppHeader() {
                 <SlidersHorizontal
                   size={20}
                   weight={pathname.startsWith("/onboarding") ? "fill" : "regular"}
-                  className={
-                    pathname.startsWith("/onboarding")
-                      ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]"
-                      : ""
-                  }
+                  className={navIconClass(pathname.startsWith("/onboarding"))}
                 />
               </button>
               {prefsOpen && (
-                <div className="absolute right-0 top-[3rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                <div className="absolute right-0 top-[3.25rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-xl">
                   <Link
                     href="/onboarding?mode=quiz"
                     onClick={() => setPrefsOpen(false)}
@@ -316,27 +305,19 @@ export default function AppHeader() {
                   setProfileOpen((current) => !current);
                   setPrefsOpen(false);
                 }}
-                className={`grid h-9 w-9 place-items-center rounded-xl transition-colors ${
-                  mobileProfileActive
-                    ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)]"
-                    : "text-[var(--muted)] hover:bg-white/[0.06] hover:text-white"
-                }`}
+                className={navItemClass(mobileProfileActive, true)}
                 aria-label="Open profile menu"
                 aria-expanded={profileOpen}
                 aria-haspopup="menu"
               >
                 <UserCircle
-                  size={21}
+                  size={20}
                   weight={mobileProfileActive ? "fill" : "regular"}
-                  className={
-                    mobileProfileActive
-                      ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]"
-                      : ""
-                  }
+                  className={navIconClass(mobileProfileActive)}
                 />
               </button>
               {profileOpen && (
-                <div className="absolute right-0 top-[3rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                <div className="absolute right-0 top-[3.25rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-xl">
                 <Link
                   href="/profile"
                   onClick={() => setProfileOpen(false)}
@@ -428,17 +409,13 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-        active
-          ? "text-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
-          : "text-[var(--muted)] hover:text-[var(--foreground)]"
-      }`}
+      className={navItemClass(active)}
     >
       {NavIcon && (
         <NavIcon
-          size={16}
+          size={18}
           weight={active ? "fill" : "regular"}
-          className={active ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.55)]" : ""}
+          className={navIconClass(active)}
         />
       )}
       {label}

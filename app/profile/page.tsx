@@ -17,7 +17,7 @@ import AppHeader from "@/components/layout/AppHeader";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
-import { Camera, ChatCircleText, Trash } from "@phosphor-icons/react";
+import { Camera, ChatCircleText, Trash, UserCircle } from "@phosphor-icons/react";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -303,11 +303,9 @@ export default function ProfilePage() {
           </Link>
           <div className="text-center max-w-xs rounded-[2rem] border border-white/10 bg-[#111015]/80 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
             <div className="mb-4 flex justify-center">
-              <svg className="w-14 h-14 text-[var(--color-cindr)] opacity-40" viewBox="0 0 120 120" fill="none">
-                <circle cx="60" cy="60" r="55" stroke="currentColor" strokeWidth="2" />
-                <circle cx="60" cy="60" r="42" stroke="currentColor" strokeWidth="1.5" />
-                <circle cx="60" cy="60" r="10" fill="currentColor" />
-              </svg>
+              <div className="grid h-14 w-14 place-items-center rounded-full border border-[var(--color-cindr)]/30 bg-[var(--color-cindr)]/10 text-[var(--color-cindr)]">
+                <UserCircle size={34} weight="duotone" />
+              </div>
             </div>
             <h1 className="text-xl font-bold mb-2">Your Profile</h1>
             <p className="text-sm text-[var(--muted)] mb-6">
@@ -349,17 +347,17 @@ export default function ProfilePage() {
     <div className="min-h-screen flex flex-col relative overflow-hidden">
       <CinematicBackdrop density="subtle" />
       <AppHeader />
-      <main className="flex-1 pt-20 pb-10 md:pb-8 px-4 max-w-md mx-auto w-full relative z-10">
-        <div className="rounded-[2rem] border border-white/10 bg-[#111015]/82 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
+      <main className="relative z-10 mx-auto w-full max-w-md flex-1 px-4 pb-10 pt-24 md:pb-8">
+        <div className="rounded-[2rem] border border-white/10 bg-[#111015]/82 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:p-6">
         <Link
           href="/discover"
-          className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white"
+          className="mb-5 inline-flex h-9 items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white"
         >
           <span>&larr;</span>
           Back to Discover
         </Link>
 
-        <div className="text-center mb-8">
+        <div className="mb-8 text-center">
           <div className="relative mx-auto mb-3 h-20 w-20">
             <div
               role={avatarUrl ? "img" : undefined}
@@ -388,10 +386,10 @@ export default function ProfilePage() {
               type="button"
               onClick={() => avatarInputRef.current?.click()}
               disabled={avatarUploading}
-              className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full border border-white/15 bg-[var(--color-cindr)] text-white transition-colors hover:bg-[var(--color-cindr-hover)] disabled:opacity-60"
+              className="absolute -bottom-1 -right-1 grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-[var(--color-cindr)] text-white transition-colors hover:bg-[var(--color-cindr-hover)] disabled:opacity-60"
               aria-label="Change profile photo"
             >
-              <Camera size={16} weight="bold" />
+              <Camera size={18} weight="bold" />
             </button>
           </div>
           <div className="mb-3 flex items-center justify-center gap-2">
@@ -399,7 +397,7 @@ export default function ProfilePage() {
               type="button"
               onClick={() => avatarInputRef.current?.click()}
               disabled={avatarUploading}
-              className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-60"
+              className="inline-flex h-9 items-center rounded-full border border-white/10 px-3 text-xs font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-60"
             >
               {avatarUploading ? "Uploading..." : avatarUrl ? "Change photo" : "Add photo"}
             </button>
@@ -408,9 +406,9 @@ export default function ProfilePage() {
                 type="button"
                 onClick={handleRemoveAvatar}
                 disabled={avatarUploading}
-                className="inline-flex items-center gap-1.5 rounded-full border border-red-500/20 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-60"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-red-500/20 px-3 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-60"
               >
-                <Trash size={13} />
+                <Trash size={14} />
                 Remove
               </button>
             )}
@@ -418,12 +416,12 @@ export default function ProfilePage() {
           {avatarMessage && (
             <p className="mb-3 text-xs text-[var(--muted)]">{avatarMessage}</p>
           )}
-          <h1 className="text-xl font-bold">{displayName}</h1>
+          <h1 className="text-xl font-semibold tracking-[-0.02em]">{displayName}</h1>
           <p className="text-sm text-[var(--muted)]">{user.email}</p>
         </div>
 
-        <div className="flex flex-col gap-2 mb-6">
-          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+        <div className="mb-6 flex flex-col gap-3">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-[var(--muted)]">Date of birth</span>
               <span className={`text-sm font-medium ${dateOfBirth ? "text-white" : "text-yellow-400"}`}>
@@ -431,7 +429,7 @@ export default function ProfilePage() {
               </span>
             </div>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <span className="text-sm text-[var(--muted)]">Library</span>
             <div className="mt-3 grid grid-cols-5 gap-2 text-center">
               {[
@@ -441,14 +439,14 @@ export default function ProfilePage() {
                 ["Seen", dashboard?.library.watched ?? 0],
                 ["Rated", dashboard?.library.rated ?? 0],
               ].map(([label, value]) => (
-                <div key={label} className="rounded-lg bg-black/20 px-1.5 py-2">
+                <div key={label} className="rounded-xl bg-black/20 px-1.5 py-2">
                   <p className="text-sm font-semibold text-white/90">{value}</p>
                   <p className="mt-0.5 text-[10px] text-white/42">{label}</p>
                 </div>
               ))}
             </div>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-[var(--muted)]">Support reports</span>
               <span className="text-sm font-semibold text-white/90">
@@ -462,26 +460,26 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => openFeedbackModal("feedback")}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.07] hover:text-white"
+              className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.07] hover:text-white"
             >
-              <ChatCircleText size={17} />
+              <ChatCircleText size={18} />
               Feedback / report issue
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <button
             type="button"
             onClick={() => setClearTasteOpen(true)}
-            className="w-full p-4 rounded-xl border border-white/8 text-white/50 text-sm font-medium hover:bg-white/[0.04] hover:text-white/70 transition-colors text-left flex items-center gap-2.5"
+            className="flex h-12 w-full items-center gap-2.5 rounded-xl border border-white/8 px-4 text-left text-sm font-medium text-white/50 transition-colors hover:bg-white/[0.04] hover:text-white/70"
           >
-            <Trash size={15} className="shrink-0 opacity-60" />
+            <Trash size={18} className="shrink-0 opacity-60" />
             Clear taste history
           </button>
           <button
             onClick={handleSignOut}
-            className="w-full p-4 rounded-xl border border-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/5 transition-colors text-left"
+            className="h-12 w-full rounded-xl border border-red-500/20 px-4 text-left text-sm font-medium text-red-400 transition-colors hover:bg-red-500/5"
           >
             Sign out
           </button>

@@ -1,21 +1,28 @@
-import { supabase } from "./client";
 import {
   clearPendingInteractions,
   getGuestState,
+  savePreferences as saveGuestPreferences,
+  markOnboardingComplete,
 } from "@/lib/guest/storage";
+import type { TasteProfile } from "@/lib/recommendations/tasteProfile";
 import type {
-  Profile,
   DbUserPreferences,
   FeedbackCategory,
   FeedbackReport,
+  Profile,
   ProfileDashboardData,
   SavedMovie,
   SavedMovieStatus,
   UserPreferences,
 } from "@/types/user";
 
-const ERA_VALUES = ["new", "modern", "classic"] as const;
-const RUNTIME_VALUES = ["short", "medium", "long", "mini"] as const;
+const LOCAL_USER_ID = "local-user";
+const LOCAL_PROFILE_KEY = "cindr_local_profile";
+const LOCAL_FEEDBACK_KEY = "cindr_local_feedback";
+const LOCAL_PREFERENCES_KEY = "cindr_local_preferences";
+const LOCAL_SAVED_MOVIES_KEY = "cindr_local_saved_movies";
+const LOCAL_TASTE_FINGERPRINT_KEY = "cindr_local_taste_fingerprint";
+
 const EMPTY_PREFERENCES: UserPreferences = {
   languages: [],
   genres: [],
@@ -29,14 +36,109 @@ const EMPTY_PREFERENCES: UserPreferences = {
   runtimePreference: "any",
 };
 
-// ── Auth helpers ────────────────────────────────────────────────────────
+type StoredPreferences = {
+  preferences: UserPreferences;
+  onboardingComplete: boolean;
+  updatedAt: string;
+};
 
-export async function getCurrentUserId(): Promise<string | null> {
-  const { data } = await supabase.auth.getUser();
-  return data.user?.id ?? null;
+type LocalUser = {
+  id: string;
+  email: string;
+  user_metadata: Record<string, unknown>;
+};
+
+function nowIso() {
+  return new Date().toISOString();
 }
 
-// ── Profile ─────────────────────────────────────────────────────────────
+function safeId(prefix: string) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function readJson<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  const value = window.localStorage.getItem(key);
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    window.localStorage.removeItem(key);
+    return fallback;
+  }
+}
+
+function writeJson<T>(key: string, value: T) {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  }
+}
+
+function localUser(): LocalUser {
+  return readJson<LocalUser>("cindr_local_user", {
+    id: LOCAL_USER_ID,
+    email: "local@cindr.app",
+    user_metadata: {
+      display_name: "Local User",
+      is_adult: true,
+    },
+  });
+}
+
+function preferencesToDb(
+  stored: StoredPreferences,
+  userId = LOCAL_USER_ID
+): DbUserPreferences {
+  return {
+    user_id: userId,
+    languages: stored.preferences.languages,
+    genres: stored.preferences.genres,
+    moods: stored.preferences.moods,
+    content_types: stored.preferences.contentTypes,
+    year_from: stored.preferences.yearFrom,
+    year_to: stored.preferences.yearTo,
+    people: stored.preferences.people,
+    discover_mode: stored.preferences.discoverMode,
+    era: stored.preferences.era,
+    runtime_preference: stored.preferences.runtimePreference,
+    onboarding_complete: stored.onboardingComplete,
+    created_at: stored.updatedAt,
+    updated_at: stored.updatedAt,
+  };
+}
+
+function dbToPreferences(dbPrefs: DbUserPreferences): UserPreferences {
+  return {
+    languages: dbPrefs.languages ?? [],
+    genres: dbPrefs.genres ?? [],
+    moods: dbPrefs.moods ?? [],
+    contentTypes: dbPrefs.content_types ?? [],
+    yearFrom: dbPrefs.year_from ?? null,
+    yearTo: dbPrefs.year_to ?? null,
+    people: dbPrefs.people ?? [],
+    discoverMode: dbPrefs.discover_mode ?? "taste",
+    era: dbPrefs.era ?? "any",
+    runtimePreference: dbPrefs.runtime_preference ?? "any",
+  };
+}
+
+function storedPreferences(): StoredPreferences {
+  const guest = getGuestState();
+  return readJson<StoredPreferences>(LOCAL_PREFERENCES_KEY, {
+    preferences: {
+      ...EMPTY_PREFERENCES,
+      ...guest.preferences,
+    },
+    onboardingComplete: guest.onboardingComplete,
+    updatedAt: nowIso(),
+  });
+}
+
+function saveStoredPreferences(stored: StoredPreferences) {
+  writeJson(LOCAL_PREFERENCES_KEY, stored);
+  saveGuestPreferences(stored.preferences);
+  if (stored.onboardingComplete) markOnboardingComplete();
+}
 
 function calculateIsAdult(dateString: string | null | undefined): boolean {
   if (!dateString) return false;
@@ -56,111 +158,98 @@ function calculateIsAdult(dateString: string | null | undefined): boolean {
   return age >= 18;
 }
 
+function defaultProfile(): Profile {
+  const user = localUser();
+  const metadata = user.user_metadata ?? {};
+  const createdAt = nowIso();
+  const dateOfBirth = (metadata.date_of_birth as string | undefined) ?? null;
+  return {
+    id: user.id || LOCAL_USER_ID,
+    display_name:
+      (metadata.display_name as string | undefined) ??
+      user.email?.split("@")[0] ??
+      "Local User",
+    date_of_birth: dateOfBirth,
+    is_adult:
+      metadata.is_adult === true ||
+      metadata.is_adult === "true" ||
+      calculateIsAdult(dateOfBirth),
+    avatar_public_id: null,
+    avatar_url: null,
+    created_at: createdAt,
+    updated_at: createdAt,
+  };
+}
+
+function readProfile(): Profile {
+  return readJson<Profile>(LOCAL_PROFILE_KEY, defaultProfile());
+}
+
+function writeProfile(profile: Profile) {
+  writeJson(LOCAL_PROFILE_KEY, { ...profile, updated_at: nowIso() });
+}
+
+function readFeedbackReports(): FeedbackReport[] {
+  return readJson<FeedbackReport[]>(LOCAL_FEEDBACK_KEY, []);
+}
+
+function writeFeedbackReports(reports: FeedbackReport[]) {
+  writeJson(LOCAL_FEEDBACK_KEY, reports);
+}
+
+function readSavedMovies(): SavedMovie[] {
+  return readJson<SavedMovie[]>(LOCAL_SAVED_MOVIES_KEY, []);
+}
+
+function writeSavedMovies(movies: SavedMovie[]) {
+  writeJson(LOCAL_SAVED_MOVIES_KEY, movies);
+}
+
+function sortSavedMovies(movies: SavedMovie[]) {
+  return [...movies].sort(
+    (a, b) =>
+      new Date(b.updated_at ?? b.created_at).getTime() -
+      new Date(a.updated_at ?? a.created_at).getTime()
+  );
+}
+
+export async function getCurrentUserId(): Promise<string | null> {
+  return localUser().id || LOCAL_USER_ID;
+}
+
 export async function getProfile(): Promise<Profile | null> {
-  const userId = await getCurrentUserId();
-  if (!userId) return null;
-  const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .single();
-  return (data as Profile) ?? null;
+  return readProfile();
 }
 
 export async function ensureProfileFromAuth(): Promise<Profile | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const existing = await getProfile();
-  const metadata = user.user_metadata ?? {};
-  const dateOfBirth =
-    (metadata.date_of_birth as string | undefined) ??
-    existing?.date_of_birth ??
-    null;
-  const isAdult =
-    calculateIsAdult(dateOfBirth) ||
-    metadata.is_adult === true ||
-    metadata.is_adult === "true";
-  const displayName =
-    (metadata.display_name as string | undefined) ??
-    existing?.display_name ??
-    user.email?.split("@")[0] ??
-    null;
-
-  const row = {
-    id: user.id,
-    display_name: displayName,
-    date_of_birth: dateOfBirth,
-    is_adult: isAdult,
-  };
-
-  const query = existing
-    ? supabase.from("profiles").update(row).eq("id", user.id)
-    : supabase.from("profiles").insert(row);
-
-  const { data } = await query.select("*").single();
-  return (data as Profile) ?? existing ?? null;
+  const profile = readProfile();
+  writeProfile(profile);
+  return profile;
 }
 
 export async function updateProfileDateOfBirth(
   dateOfBirth: string
 ): Promise<Profile | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const isAdult = calculateIsAdult(dateOfBirth);
-  const displayName =
-    (user.user_metadata?.display_name as string | undefined) ??
-    user.email?.split("@")[0] ??
-    null;
-
-  await supabase.auth.updateUser({
-    data: {
-      ...user.user_metadata,
-      date_of_birth: dateOfBirth,
-      is_adult: isAdult,
-    },
-  });
-
-  const { data } = await supabase
-    .from("profiles")
-    .upsert(
-      {
-        id: user.id,
-        display_name: displayName,
-        date_of_birth: dateOfBirth,
-        is_adult: isAdult,
-      },
-      { onConflict: "id" }
-    )
-    .select("*")
-    .single();
-
-  return (data as Profile) ?? null;
+  const profile = {
+    ...readProfile(),
+    date_of_birth: dateOfBirth,
+    is_adult: calculateIsAdult(dateOfBirth),
+  };
+  writeProfile(profile);
+  return readProfile();
 }
 
 export async function updateProfileAvatar(input: {
   avatarPublicId: string | null;
   avatarUrl: string | null;
 }): Promise<Profile | null> {
-  const userId = await getCurrentUserId();
-  if (!userId) return null;
-
-  const { data } = await supabase
-    .from("profiles")
-    .update({
-      avatar_public_id: input.avatarPublicId,
-      avatar_url: input.avatarUrl,
-    })
-    .eq("id", userId)
-    .select("*")
-    .single();
-
-  return (data as Profile) ?? null;
+  const profile = {
+    ...readProfile(),
+    avatar_public_id: input.avatarPublicId,
+    avatar_url: input.avatarUrl,
+  };
+  writeProfile(profile);
+  return readProfile();
 }
 
 export async function submitFeedbackReport(input: {
@@ -169,229 +258,107 @@ export async function submitFeedbackReport(input: {
   pagePath?: string | null;
   userAgent?: string | null;
 }): Promise<FeedbackReport | null> {
-  const userId = await getCurrentUserId();
-
-  const { data, error } = await supabase
-    .from("feedback_reports")
-    .insert({
-      user_id: userId ?? null,
-      category: input.category,
-      message: input.message.trim(),
-      page_path: input.pagePath ?? null,
-      user_agent: input.userAgent ?? null,
-    })
-    .select("*")
-    .single();
-
-  if (error) throw error;
-  return (data as FeedbackReport) ?? null;
+  const report: FeedbackReport = {
+    id: safeId("feedback"),
+    user_id: LOCAL_USER_ID,
+    category: input.category,
+    message: input.message.trim(),
+    page_path: input.pagePath ?? null,
+    user_agent: input.userAgent ?? null,
+    status: "open",
+    created_at: nowIso(),
+  };
+  writeFeedbackReports([report, ...readFeedbackReports()]);
+  return report;
 }
 
-// ── Preferences ─────────────────────────────────────────────────────────
-
 export async function getDbPreferences(): Promise<DbUserPreferences | null> {
-  const userId = await getCurrentUserId();
-  if (!userId) return null;
-  const { data } = await supabase
-    .from("user_preferences")
-    .select("*")
-    .eq("user_id", userId)
-    .single();
-  return (data as DbUserPreferences) ?? null;
+  return preferencesToDb(storedPreferences());
 }
 
 export async function upsertPreferences(
   prefs: Partial<UserPreferences> & { onboardingComplete?: boolean }
 ): Promise<void> {
-  const userId = await getCurrentUserId();
-  if (!userId) return;
-
-  const row: Record<string, unknown> = { user_id: userId };
-  if (prefs.languages) row.languages = prefs.languages;
-  if (prefs.genres) row.genres = prefs.genres;
-  if (prefs.moods) row.moods = prefs.moods;
-  if (prefs.contentTypes) row.content_types = prefs.contentTypes;
-  if (prefs.yearFrom !== undefined) row.year_from = prefs.yearFrom;
-  if (prefs.yearTo !== undefined) row.year_to = prefs.yearTo;
-  if (prefs.people) row.people = prefs.people;
-  if (prefs.discoverMode) row.discover_mode = prefs.discoverMode;
-  if (prefs.era) row.era = prefs.era;
-  if (prefs.runtimePreference) row.runtime_preference = prefs.runtimePreference;
-  if (prefs.onboardingComplete !== undefined)
-    row.onboarding_complete = prefs.onboardingComplete;
-
-  const { error } = await supabase
-    .from("user_preferences")
-    .upsert(row, { onConflict: "user_id" });
-
-  if (!error) return;
-
-  const legacyRow = { ...row };
-  delete legacyRow.discover_mode;
-  delete legacyRow.era;
-  delete legacyRow.runtime_preference;
-  const hasOnlyNewPreferenceColumnsMissing =
-    error.code === "PGRST204" || error.message.includes("schema cache");
-
-  if (hasOnlyNewPreferenceColumnsMissing) {
-    const { error: legacyError } = await supabase
-      .from("user_preferences")
-      .upsert(legacyRow, { onConflict: "user_id" });
-    if (!legacyError) return;
-  }
-
-  throw error;
+  const current = storedPreferences();
+  const next: StoredPreferences = {
+    preferences: {
+      ...current.preferences,
+      ...prefs,
+    },
+    onboardingComplete:
+      prefs.onboardingComplete ?? current.onboardingComplete,
+    updatedAt: nowIso(),
+  };
+  delete (next.preferences as Partial<UserPreferences> & {
+    onboardingComplete?: boolean;
+  }).onboardingComplete;
+  saveStoredPreferences(next);
 }
 
-function hasMeaningfulGuestPreferences(prefs: UserPreferences): boolean {
-  return (
-    prefs.languages.length > 0 ||
-    prefs.genres.length > 0 ||
-    prefs.moods.length > 0 ||
-    prefs.contentTypes.length > 0 ||
-    Boolean(prefs.yearFrom) ||
-    Boolean(prefs.yearTo) ||
-    prefs.people.length > 0 ||
-    prefs.discoverMode !== "taste" ||
-    prefs.era !== "any" ||
-    prefs.runtimePreference !== "any"
-  );
-}
-
-/**
- * After login/signup, push guest localStorage preferences into Supabase.
- */
 export async function syncGuestToAccount(): Promise<void> {
-  const userId = await getCurrentUserId();
-  if (!userId) return;
-
   const guest = getGuestState();
-  const existingPrefs = await getDbPreferences();
-  const shouldSyncGuestPreferences =
-    hasMeaningfulGuestPreferences(guest.preferences) &&
-    (!existingPrefs || !existingPrefs.onboarding_complete);
-
-  if (shouldSyncGuestPreferences) {
-    await upsertPreferences({
+  const current = storedPreferences();
+  const next: StoredPreferences = {
+    preferences: {
+      ...current.preferences,
       ...guest.preferences,
-      onboardingComplete: guest.onboardingComplete,
-    });
-  }
+    },
+    onboardingComplete: current.onboardingComplete || guest.onboardingComplete,
+    updatedAt: nowIso(),
+  };
+  saveStoredPreferences(next);
 
-  if (guest.pendingInteractions.length > 0) {
-    for (const interaction of guest.pendingInteractions) {
-      await patchMovieInteraction(
-        {
-          tmdb_id: interaction.tmdb_id,
-          media_type: interaction.media_type,
-          title: interaction.title,
-          poster_path: interaction.poster_path,
-        },
-        interaction.patch
-      );
-    }
-    clearPendingInteractions();
+  for (const interaction of guest.pendingInteractions) {
+    await patchMovieInteraction(
+      {
+        tmdb_id: interaction.tmdb_id,
+        media_type: interaction.media_type,
+        title: interaction.title,
+        poster_path: interaction.poster_path,
+      },
+      interaction.patch
+    );
   }
-
+  clearPendingInteractions();
   await ensureProfileFromAuth();
 }
 
-/**
- * Build a merged preferences object: Supabase for authenticated users,
- * localStorage for guests. Returns the same shape the discover page expects.
- */
 export async function getEffectivePreferences(): Promise<{
   preferences: UserPreferences;
   onboardingComplete: boolean;
 }> {
-  const guest = getGuestState();
-  const userId = await getCurrentUserId();
-  if (userId) {
-    const dbPrefs = await getDbPreferences();
-    if (dbPrefs) {
-      const rawMoods = dbPrefs.moods ?? [];
-      const legacyEra = rawMoods.find((mood) =>
-        ERA_VALUES.includes(mood as (typeof ERA_VALUES)[number])
-      );
-      const legacyRuntime = rawMoods.find((mood) =>
-        RUNTIME_VALUES.includes(mood as (typeof RUNTIME_VALUES)[number])
-      );
-      return {
-        preferences: {
-          languages: dbPrefs.languages,
-          genres: dbPrefs.genres,
-          moods: rawMoods.filter(
-            (mood) =>
-              !ERA_VALUES.includes(mood as (typeof ERA_VALUES)[number]) &&
-              !RUNTIME_VALUES.includes(mood as (typeof RUNTIME_VALUES)[number])
-          ),
-          contentTypes: dbPrefs.content_types,
-          yearFrom: dbPrefs.year_from,
-          yearTo: dbPrefs.year_to,
-          people: dbPrefs.people ?? [],
-          discoverMode: dbPrefs.discover_mode ?? "taste",
-          era: dbPrefs.era ?? legacyEra ?? "any",
-          runtimePreference:
-            dbPrefs.runtime_preference ??
-            (legacyRuntime === "mini" ? "short" : legacyRuntime) ??
-            "any",
-        },
-        onboardingComplete: dbPrefs.onboarding_complete,
-      };
-    }
-    return {
-      preferences: EMPTY_PREFERENCES,
-      onboardingComplete: false,
-    };
-  }
-
+  const stored = storedPreferences();
   return {
-    preferences: guest.preferences,
-    onboardingComplete: guest.onboardingComplete,
+    preferences: {
+      ...EMPTY_PREFERENCES,
+      ...stored.preferences,
+    },
+    onboardingComplete: stored.onboardingComplete,
   };
 }
 
 export async function getProfileDashboardData(): Promise<ProfileDashboardData | null> {
-  const userId = await getCurrentUserId();
-  if (!userId) return null;
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const [profile, preferences, savedMovies, feedbackReports] = await Promise.all([
-    ensureProfileFromAuth(),
-    getDbPreferences(),
-    supabase.from("saved_movies").select("*").eq("user_id", userId),
-    supabase.from("feedback_reports").select("*").eq("user_id", userId),
-  ]);
-
-  const movies = (savedMovies.data as SavedMovie[] | null) ?? [];
-  const reports = (feedbackReports.data as FeedbackReport[] | null) ?? [];
-  const displayName =
-    profile?.display_name ??
-    (user?.user_metadata?.display_name as string | undefined) ??
-    user?.email?.split("@")[0] ??
-    "User";
+  const profile = readProfile();
+  const prefs = dbToPreferences(preferencesToDb(storedPreferences()));
+  const movies = readSavedMovies();
+  const reports = readFeedbackReports();
 
   return {
     identity: {
-      displayName,
-      email: user?.email ?? null,
-      avatarUrl: profile?.avatar_url ?? null,
-      dateOfBirth:
-        profile?.date_of_birth ??
-        (user?.user_metadata?.date_of_birth as string | undefined) ??
-        null,
+      displayName: profile.display_name ?? "Local User",
+      email: localUser().email ?? null,
+      avatarUrl: profile.avatar_url ?? null,
+      dateOfBirth: profile.date_of_birth ?? null,
     },
     taste: {
-      languages: preferences?.languages ?? [],
-      contentTypes: preferences?.content_types ?? [],
-      moods: preferences?.moods ?? [],
-      genres: preferences?.genres ?? [],
-      yearFrom: preferences?.year_from ?? null,
-      yearTo: preferences?.year_to ?? null,
-      peopleCount: preferences?.people?.length ?? 0,
-      discoverMode: preferences?.discover_mode ?? "taste",
+      languages: prefs.languages,
+      contentTypes: prefs.contentTypes,
+      moods: prefs.moods,
+      genres: prefs.genres,
+      yearFrom: prefs.yearFrom,
+      yearTo: prefs.yearTo,
+      peopleCount: prefs.people.length,
+      discoverMode: prefs.discoverMode,
     },
     library: {
       liked: movies.filter((movie) => movie.liked).length,
@@ -407,8 +374,6 @@ export async function getProfileDashboardData(): Promise<ProfileDashboardData | 
   };
 }
 
-// ── Saved movies (watchlist) ────────────────────────────────────────────
-
 type MovieInteractionInput = {
   tmdb_id: number;
   media_type: "movie" | "tv";
@@ -423,20 +388,46 @@ type MovieInteractionPatch = Partial<
   >
 >;
 
-async function getExistingSavedMovie(
-  userId: string,
+function findSavedMovie(
+  movies: SavedMovie[],
   tmdbId: number,
   mediaType: "movie" | "tv"
-): Promise<SavedMovie | null> {
-  const { data } = await supabase
-    .from("saved_movies")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("tmdb_id", tmdbId)
-    .eq("media_type", mediaType)
-    .maybeSingle();
+) {
+  return movies.find(
+    (movie) => movie.tmdb_id === tmdbId && movie.media_type === mediaType
+  );
+}
 
-  return (data as SavedMovie) ?? null;
+function upsertSavedMovie(
+  movie: MovieInteractionInput,
+  patch: MovieInteractionPatch & { status?: SavedMovieStatus | null }
+): SavedMovie {
+  const movies = readSavedMovies();
+  const existing = findSavedMovie(movies, movie.tmdb_id, movie.media_type);
+  const timestamp = nowIso();
+  const next: SavedMovie = {
+    id: existing?.id ?? safeId("movie"),
+    user_id: LOCAL_USER_ID,
+    tmdb_id: movie.tmdb_id,
+    media_type: movie.media_type,
+    title: movie.title,
+    poster_path: movie.poster_path,
+    status: patch.status ?? existing?.status ?? null,
+    liked: patch.liked ?? existing?.liked ?? false,
+    watchlisted: patch.watchlisted ?? existing?.watchlisted ?? false,
+    favourite: patch.favourite ?? existing?.favourite ?? false,
+    watched: patch.watched ?? existing?.watched ?? false,
+    rating: patch.rating !== undefined ? patch.rating : existing?.rating ?? null,
+    created_at: existing?.created_at ?? timestamp,
+    updated_at: timestamp,
+  };
+
+  writeSavedMovies(
+    existing
+      ? movies.map((item) => (item.id === existing.id ? next : item))
+      : [next, ...movies]
+  );
+  return next;
 }
 
 export async function saveMovie(movie: {
@@ -446,154 +437,64 @@ export async function saveMovie(movie: {
   poster_path: string | null;
   status?: SavedMovieStatus;
 }): Promise<SavedMovie | null> {
-  const userId = await getCurrentUserId();
-  if (!userId) return null;
-
-  const existing = await getExistingSavedMovie(
-    userId,
-    movie.tmdb_id,
-    movie.media_type
-  );
-  const row = {
-    user_id: userId,
-    tmdb_id: movie.tmdb_id,
-    media_type: movie.media_type,
-    title: movie.title,
-    poster_path: movie.poster_path,
+  return upsertSavedMovie(movie, {
     status: movie.status ?? "saved",
     watchlisted: true,
-  };
-
-  const query = existing
-    ? supabase.from("saved_movies").update(row).eq("id", existing.id)
-    : supabase.from("saved_movies").insert(row);
-
-  const { data } = await query.select().single();
-
-  return (data as SavedMovie) ?? null;
+  });
 }
 
 export async function likeMovie(
   movie: MovieInteractionInput
 ): Promise<SavedMovie | null> {
-  const userId = await getCurrentUserId();
-  if (!userId) return null;
-
-  const existing = await getExistingSavedMovie(
-    userId,
-    movie.tmdb_id,
-    movie.media_type
-  );
-
-  const row = {
-    user_id: userId,
-    tmdb_id: movie.tmdb_id,
-    media_type: movie.media_type,
-    title: movie.title,
-    poster_path: movie.poster_path,
-    liked: true,
-  };
-
-  const query = existing
-    ? supabase.from("saved_movies").update(row).eq("id", existing.id)
-    : supabase
-        .from("saved_movies")
-        .insert({ ...row, status: null as SavedMovieStatus | null });
-
-  const { data } = await query.select().single();
-
-  return (data as SavedMovie) ?? null;
+  return upsertSavedMovie(movie, { liked: true });
 }
 
 export async function rateMovie(
   movie: MovieInteractionInput & { rating: number }
 ): Promise<SavedMovie | null> {
-  const userId = await getCurrentUserId();
-  if (!userId) return null;
-
   const rating = Math.max(1, Math.min(10, Math.round(movie.rating)));
-  const existing = await getExistingSavedMovie(
-    userId,
-    movie.tmdb_id,
-    movie.media_type
-  );
-
-  const row = {
-    user_id: userId,
-    tmdb_id: movie.tmdb_id,
-    media_type: movie.media_type,
-    title: movie.title,
-    poster_path: movie.poster_path,
-    rating,
-  };
-
-  const query = existing
-    ? supabase.from("saved_movies").update(row).eq("id", existing.id)
-    : supabase
-        .from("saved_movies")
-        .insert({ ...row, status: null as SavedMovieStatus | null });
-
-  const { data } = await query.select().single();
-
-  return (data as SavedMovie) ?? null;
+  return upsertSavedMovie(movie, { rating });
 }
 
 export async function updateSavedMovieRating(
   id: string,
   rating: number
 ): Promise<void> {
+  const movies = readSavedMovies();
   const nextRating = Math.max(1, Math.min(10, Math.round(rating)));
-  await supabase
-    .from("saved_movies")
-    .update({ rating: nextRating })
-    .eq("id", id);
+  writeSavedMovies(
+    movies.map((movie) =>
+      movie.id === id
+        ? { ...movie, rating: nextRating, updated_at: nowIso() }
+        : movie
+    )
+  );
 }
 
 export async function getSavedMovieForTitle(
   tmdbId: number,
   mediaType: "movie" | "tv"
 ): Promise<SavedMovie | null> {
-  const userId = await getCurrentUserId();
-  if (!userId) return null;
-  return getExistingSavedMovie(userId, tmdbId, mediaType);
+  return findSavedMovie(readSavedMovies(), tmdbId, mediaType) ?? null;
 }
 
 export async function patchMovieInteraction(
   movie: MovieInteractionInput,
   patch: MovieInteractionPatch
 ): Promise<SavedMovie | null> {
-  const userId = await getCurrentUserId();
-  if (!userId) return null;
-
-  const existing = await getExistingSavedMovie(
-    userId,
-    movie.tmdb_id,
-    movie.media_type
-  );
-  const row = {
-    user_id: userId,
-    tmdb_id: movie.tmdb_id,
-    media_type: movie.media_type,
-    title: movie.title,
-    poster_path: movie.poster_path,
-    ...patch,
-  };
-
-  const query = existing
-    ? supabase.from("saved_movies").update(row).eq("id", existing.id)
-    : supabase
-        .from("saved_movies")
-        .insert({ ...row, status: null as SavedMovieStatus | null });
-
-  const { data } = await query.select().single();
-  return (data as SavedMovie) ?? null;
+  return upsertSavedMovie(movie, patch);
 }
 
 export async function patchSavedMovieById(
   id: string,
   patch: MovieInteractionPatch
 ): Promise<void> {
-  await supabase.from("saved_movies").update(patch).eq("id", id);
+  const movies = readSavedMovies();
+  writeSavedMovies(
+    movies.map((movie) =>
+      movie.id === id ? { ...movie, ...patch, updated_at: nowIso() } : movie
+    )
+  );
 }
 
 export async function updateSavedMovieStatus(
@@ -606,71 +507,27 @@ export async function updateSavedMovieStatus(
       : status === "favourite"
       ? { status, favourite: true }
       : { status, watched: true, watchlisted: false };
-
-  await supabase.from("saved_movies").update(flagPatch).eq("id", id);
+  await patchSavedMovieById(id, flagPatch);
 }
 
 export async function removeSavedMovie(id: string): Promise<void> {
-  await supabase.from("saved_movies").delete().eq("id", id);
+  writeSavedMovies(readSavedMovies().filter((movie) => movie.id !== id));
 }
 
 export async function getSavedMovies(): Promise<SavedMovie[]> {
-  const userId = await getCurrentUserId();
-  if (!userId) return [];
-  const { data } = await supabase
-    .from("saved_movies")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-  return (data as SavedMovie[]) ?? [];
+  return sortSavedMovies(readSavedMovies());
 }
 
-// ── CindrSense taste fingerprint persistence ─────────────────────────────
-
-import type { TasteProfile } from "@/lib/recommendations/tasteProfile";
-
-/**
- * Persist the user's taste fingerprint to Supabase so it survives
- * across devices and browser clears. Fire-and-forget — no await needed.
- */
 export async function saveTasteFingerprint(profile: TasteProfile): Promise<void> {
-  const userId = await getCurrentUserId();
-  if (!userId) return;
-  await supabase.from("taste_fingerprints").upsert(
-    {
-      user_id:     userId,
-      fingerprint: profile,
-      swipe_count: profile.swipeCount,
-      updated_at:  new Date().toISOString(),
-    },
-    { onConflict: "user_id" }
-  );
+  writeJson(LOCAL_TASTE_FINGERPRINT_KEY, profile);
 }
 
-/**
- * Load the user's taste fingerprint from Supabase.
- * Returns null for guests or if no fingerprint exists yet.
- */
 export async function loadTasteFingerprint(): Promise<TasteProfile | null> {
-  const userId = await getCurrentUserId();
-  if (!userId) return null;
-  const { data } = await supabase
-    .from("taste_fingerprints")
-    .select("fingerprint, updated_at")
-    .eq("user_id", userId)
-    .single();
-  if (!data?.fingerprint) return null;
-  return data.fingerprint as TasteProfile;
+  return readJson<TasteProfile | null>(LOCAL_TASTE_FINGERPRINT_KEY, null);
 }
 
-/** Lightweight — only fetches liked tmdb_ids to exclude from discover feed */
 export async function getLikedTmdbIds(): Promise<number[]> {
-  const userId = await getCurrentUserId();
-  if (!userId) return [];
-  const { data } = await supabase
-    .from("saved_movies")
-    .select("tmdb_id")
-    .eq("user_id", userId)
-    .eq("liked", true);
-  return (data ?? []).map((r: { tmdb_id: number }) => r.tmdb_id);
+  return readSavedMovies()
+    .filter((movie) => movie.liked)
+    .map((movie) => movie.tmdb_id);
 }

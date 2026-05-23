@@ -7,6 +7,8 @@ import type { MovieCardData } from "@/types/movie";
 import SwipeActions from "./SwipeActions";
 
 const SWIPE_THRESHOLD = 120;
+const MOTION_EASE_OUT = [0.22, 1, 0.36, 1] as const;
+const MOTION_EASE_IN = [0.4, 0, 1, 1] as const;
 
 interface SwipeDeckProps {
   cards: MovieCardData[];
@@ -16,6 +18,7 @@ interface SwipeDeckProps {
   onOpenTrailer?: () => void;
   trailerOpen?: boolean;
   discoverMode?: string;
+  modeTransitionNonce?: number;
   onUndo?: () => void;
   canUndo?: boolean;
 }
@@ -28,6 +31,7 @@ export default function SwipeDeck({
   onOpenTrailer,
   trailerOpen,
   discoverMode,
+  modeTransitionNonce,
   onUndo,
   canUndo,
 }: SwipeDeckProps) {
@@ -39,7 +43,18 @@ export default function SwipeDeck({
   } | null>(null);
   const [dragDirection, setDragDirection] = useState<"left" | "right" | "up" | null>(null);
   const actionNonce = useRef(0);
+  const handledModeTransitionNonce = useRef<number | null>(null);
   const activeRequest = swipeRequest ?? actionRequest ?? undefined;
+  const [modeTransitionActive, setModeTransitionActive] = useState(false);
+
+  useEffect(() => {
+    if (!modeTransitionNonce) return;
+    if (handledModeTransitionNonce.current === modeTransitionNonce) return;
+    handledModeTransitionNonce.current = modeTransitionNonce;
+    setModeTransitionActive(true);
+    const timer = window.setTimeout(() => setModeTransitionActive(false), 380);
+    return () => window.clearTimeout(timer);
+  }, [modeTransitionNonce]);
 
   function requestSwipe(direction: "left" | "right") {
     const topCard = visibleCards[0];
@@ -49,43 +64,53 @@ export default function SwipeDeck({
     setActionRequest({ direction, nonce, cardId: topCard.id });
   }
 
+  function handleSwipeComplete(id: number, direction: "left" | "right") {
+    setActionRequest(null);
+    onSwipe(id, direction);
+  }
+
   return (
-    <div className="flex h-full w-full flex-col">
-      {/* Card area — fills all available flex space */}
-      <div className="relative mx-auto flex-1 min-h-0 w-[min(84vw,360px)] sm:w-[min(92vw,430px)] md:w-[min(92vw,440px)] md:max-h-[640px] mt-1">
+    <div className="flex h-full w-full flex-col items-center">
+      <div className="relative mx-auto mt-1 aspect-[2/3] h-[min(58svh,590px)] min-h-0 max-h-[590px] w-auto max-w-[min(86vw,430px)] sm:h-[min(62svh,630px)] md:h-[min(64svh,650px)]">
         {visibleCards.map((card, i) => (
           <SwipeCard
             key={`${card.media_type ?? "movie"}-${card.id}`}
             card={card}
             index={i}
             onSwipeStart={onSwipeStart}
-            onSwipe={onSwipe}
+            onSwipe={handleSwipeComplete}
             isTop={i === 0}
             swipeRequest={i === 0 ? activeRequest : undefined}
             onDragChange={i === 0 ? setDragDirection : undefined}
             onOpenTrailer={i === 0 ? onOpenTrailer : undefined}
             trailerOpen={trailerOpen}
             showRecommendedChip={discoverMode === "taste"}
+            randomMode={discoverMode === "random"}
+            modeTransitionActive={modeTransitionActive}
           />
         ))}
       </div>
 
-      {/* Actions area — normal flow below the card */}
       {visibleCards.length > 0 && (
-        <div className="flex w-full flex-col items-center gap-2 pb-2 pt-5 sm:pt-6">
+        <div className="flex w-full flex-col items-center gap-2 pb-1 pt-7 sm:pt-8">
           <SwipeActions
             onSkip={() => requestSwipe("left")}
             onLike={() => requestSwipe("right")}
             onOpenTrailer={onOpenTrailer}
             dragDirection={dragDirection}
             trailerOpen={trailerOpen}
+            randomMode={discoverMode === "random"}
           />
           {canUndo && onUndo && (
-            <div className="flex w-[min(84vw,360px)] justify-end sm:w-[min(92vw,430px)]">
+            <div className="flex w-[min(86vw,430px)] justify-center">
               <button
                 onClick={onUndo}
-                className="h-6 rounded-full border border-white/10 bg-[#111015]/90 px-3 text-[11px] font-medium text-white/55 backdrop-blur-md transition-colors hover:border-[var(--color-cindr)]/40 hover:text-white/85 active:scale-95"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-[#111015]/88 px-3 text-[11px] font-medium text-white/58 backdrop-blur-md transition-colors hover:bg-white/[0.06] hover:text-white active:scale-[0.98]"
               >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M9 9H4V4" />
+                  <path d="M4 9a8 8 0 1 1 2.35 5.66" />
+                </svg>
                 Undo
               </button>
             </div>
@@ -107,6 +132,8 @@ function SwipeCard({
   onOpenTrailer,
   trailerOpen,
   showRecommendedChip,
+  randomMode,
+  modeTransitionActive,
 }: {
   card: MovieCardData;
   index: number;
@@ -118,18 +145,19 @@ function SwipeCard({
   onOpenTrailer?: () => void;
   trailerOpen?: boolean;
   showRecommendedChip?: boolean;
+  randomMode?: boolean;
+  modeTransitionActive?: boolean;
 })
  {
   const [exitingDirection, setExitingDirection] = useState<"left" | "right" | null>(null);
   const handledNonce = useRef<number | null>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  const rotate = useTransform(x, [-220, 220], [-14, 14]);
-  const leftOpacity = useTransform(x, [-100, -20], [1, 0]);
-  const rightOpacity = useTransform(x, [20, 100], [0, 1]);
-  const upOpacity = useTransform(y, [-80, -20], [1, 0]);
-  const borderOpacity = useTransform(x, [-180, 0, 180], [0.9, 0.45, 0.9]);
-  const accentX = useTransform(x, [-180, 180], ["-22%", "22%"]);
+  const rotate = useTransform(x, [-220, 220], [-10, 10]);
+  const leftOpacity = useTransform(x, [-110, -32], [1, 0]);
+  const rightOpacity = useTransform(x, [32, 110], [0, 1]);
+  const upOpacity = useTransform(y, [-88, -28], [1, 0]);
+  const borderOpacity = useTransform(x, [-180, 0, 180], [0.72, 0.38, 0.72]);
 
   useMotionValueEvent(x, "change", (v) => {
     if (!isTop) return;
@@ -152,7 +180,7 @@ function SwipeCard({
     onDragChange?.(null);
     setExitingDirection(direction);
     onSwipeStart?.(card.id, direction);
-    setTimeout(() => onSwipe(card.id, direction), 180);
+    setTimeout(() => onSwipe(card.id, direction), 160);
   }
 
   function handleDragEnd(_: unknown, info: PanInfo) {
@@ -186,8 +214,8 @@ function SwipeCard({
   const scale = 1 - index * 0.04;
   const yOffset = index * 10;
 
-  const leftGlow = useTransform(x, [-160, -30], [0.38, 0]);
-  const rightGlow = useTransform(x, [30, 160], [0, 0.38]);
+  const leftGlow = useTransform(x, [-160, -36], [0.22, 0]);
+  const rightGlow = useTransform(x, [36, 160], [0, 0.22]);
 
   return (
     <>
@@ -197,14 +225,14 @@ function SwipeCard({
             className="fixed inset-0 pointer-events-none z-40"
             style={{
               opacity: leftGlow,
-              background: "linear-gradient(to right, rgba(239,68,68,0.55) 0%, rgba(239,68,68,0.12) 35%, transparent 65%)",
+              background: "linear-gradient(to right, rgba(239,68,68,0.28) 0%, rgba(239,68,68,0.07) 35%, transparent 68%)",
             }}
           />
           <motion.div
             className="fixed inset-0 pointer-events-none z-40"
             style={{
               opacity: rightGlow,
-              background: "linear-gradient(to left, rgba(216,90,48,0.55) 0%, rgba(216,90,48,0.12) 35%, transparent 65%)",
+              background: "linear-gradient(to left, rgba(216,90,48,0.28) 0%, rgba(216,90,48,0.07) 35%, transparent 68%)",
             }}
           />
         </>
@@ -219,69 +247,81 @@ function SwipeCard({
       }}
       drag={isTop && !trailerOpen}
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-      dragElastic={0.9}
+      dragElastic={0.46}
       onDragEnd={isTop ? handleDragEnd : undefined}
       initial={
         isTop
-          ? { opacity: 0, scale: 0.94, y: 24 }
-          : { opacity: 0, scale: 0.9, y: 18 }
+          ? { opacity: 0, scale: 0.98, y: 14 }
+          : { opacity: 0, scale: 0.96, y: 10 }
       }
       animate={
         exitingDirection
           ? {
               x: exitingDirection === "right" ? 520 : -520,
-              rotate: exitingDirection === "right" ? 18 : -18,
+              rotate: exitingDirection === "right" ? 12 : -12,
               opacity: 0,
-              scale: 0.96,
-              transition: { duration: 0.28, ease: [0.23, 1, 0.32, 1] },
+              scale: 0.98,
+              transition: { duration: 0.22, ease: MOTION_EASE_IN },
             }
           : {
-              opacity: 1,
-              scale,
-              y: yOffset,
-              transition: { duration: 0.32, ease: [0.23, 1, 0.32, 1] },
+              opacity: modeTransitionActive && !isTop ? 0 : 1,
+              scale: modeTransitionActive && isTop ? scale * 0.9 : scale,
+              y: modeTransitionActive && isTop ? yOffset + 46 : yOffset,
+              transition: { duration: 0.28, ease: MOTION_EASE_OUT },
             }
       }
     >
+      {card.isSuperMatch && (
+        <div
+          className={`cindr-match-aura pointer-events-none absolute -inset-3 rounded-[2.25rem] blur-xl sm:-inset-5 sm:blur-2xl ${
+            randomMode
+              ? "bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.22),rgba(226,232,240,0.1)_36%,transparent_72%)]"
+              : "bg-[radial-gradient(ellipse_at_center,rgba(251,191,36,0.34),rgba(216,90,48,0.14)_36%,transparent_72%)]"
+          }`}
+          aria-hidden="true"
+        />
+      )}
       <div
-        className="group relative h-full w-full select-none overflow-hidden rounded-[2rem] bg-[#0f0f14] p-[1px]"
+        className={`group relative h-full w-full select-none overflow-hidden rounded-[1.75rem] border bg-[#0f0f14] ${
+          randomMode
+            ? "border-slate-100/35"
+            : card.isSuperMatch
+            ? "border-amber-300/45"
+            : "border-[var(--color-cindr)]/35"
+        }`}
         style={{
           boxShadow: card.isSuperMatch
-            ? "0 0 0 1px rgba(251,191,36,0.6), 0 0 55px rgba(251,191,36,0.32), 0 0 100px rgba(251,191,36,0.14), 0 28px 90px rgba(0,0,0,0.55)"
-            : "0 28px 90px rgba(0,0,0,0.55)",
+            ? "0 24px 80px rgba(0,0,0,0.52)"
+            : "0 24px 80px rgba(0,0,0,0.52)",
         }}
       >
-        {/* Border gradient — gold for SuperMatch, orange normally */}
-        {card.isSuperMatch ? (
-          <motion.div
-            className="absolute inset-0 rounded-[2rem]"
-            style={{ x: isTop ? accentX : 0 }}
-            animate={{ opacity: [0.72, 1, 0.72] }}
-            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-            initial={false}
-          >
-            <div className="absolute inset-0 rounded-[2rem] bg-[linear-gradient(130deg,rgba(251,191,36,0.35),rgba(245,158,11,0.98),rgba(255,255,255,0.22),rgba(217,119,6,0.62),rgba(251,191,36,0.35))]" />
-          </motion.div>
-        ) : (
-          <motion.div
-            className="absolute inset-0 rounded-[2rem] bg-[linear-gradient(120deg,rgba(216,90,48,0.18),rgba(216,90,48,0.95),rgba(255,255,255,0.16),rgba(153,60,29,0.5),rgba(216,90,48,0.18))]"
-            style={{ opacity: isTop ? borderOpacity : 0.28, x: isTop ? accentX : 0 }}
-          />
-        )}
-        <div className="relative h-full w-full overflow-hidden rounded-[calc(2rem-1px)] bg-[var(--surface)]">
+        <div
+          className={`pointer-events-none absolute -inset-px z-20 rounded-[inherit] mix-blend-screen opacity-70 ${
+            randomMode
+              ? "bg-[radial-gradient(ellipse_at_50%_-12%,rgba(255,255,255,0.34),rgba(226,232,240,0.1)_28%,transparent_58%)]"
+              : "bg-[radial-gradient(ellipse_at_50%_-12%,rgba(255,236,214,0.34),rgba(255,184,115,0.1)_28%,transparent_58%)]"
+          }`}
+        />
+        <div
+          className={`pointer-events-none absolute inset-0 z-20 rounded-[inherit] ${
+            randomMode
+              ? "shadow-[inset_0_1px_0_rgba(255,255,255,0.42),inset_18px_0_42px_rgba(226,232,240,0.055),inset_-18px_0_42px_rgba(226,232,240,0.055)]"
+              : "shadow-[inset_0_1px_0_rgba(255,236,214,0.42),inset_18px_0_42px_rgba(255,184,115,0.055),inset_-18px_0_42px_rgba(255,184,115,0.055)]"
+          }`}
+        />
+        <motion.div
+          className={`pointer-events-none absolute inset-0 z-20 rounded-[inherit] ${
+            randomMode
+              ? "ring-1 ring-slate-100/35"
+              : card.isSuperMatch
+              ? "ring-1 ring-amber-300/45"
+              : "ring-1 ring-[var(--color-cindr)]/35"
+          }`}
+          style={{ opacity: isTop ? borderOpacity : 0.22 }}
+        />
+        <div className="relative h-full w-full overflow-hidden rounded-[calc(1.75rem-1px)] bg-[var(--surface)]">
           {card.posterUrl ? (
             <>
-              <Image
-                src={card.posterUrl}
-                alt=""
-                fill
-                sizes="(max-width: 640px) 84vw, 430px"
-                priority={index === 0}
-                loading="eager"
-                className="scale-110 object-cover opacity-45 blur-xl"
-                draggable={false}
-                aria-hidden="true"
-              />
               <Image
                 src={card.posterUrl}
                 alt={card.title}
@@ -289,7 +329,7 @@ function SwipeCard({
                 sizes="(max-width: 640px) 84vw, 430px"
                 priority={index === 0}
                 loading="eager"
-                className="object-contain object-center transition-transform duration-700 ease-out group-hover:scale-[1.015]"
+                className="object-contain object-center transition-transform duration-300 ease-out group-hover:scale-[1.008]"
                 draggable={false}
               />
             </>
@@ -308,45 +348,43 @@ function SwipeCard({
           {isTop && (
             <>
               <motion.div
-                className="absolute left-6 top-6 rounded-2xl border-2 border-red-400 bg-black/35 px-4 py-2 text-lg font-black text-red-300 shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-md -rotate-12"
+                className="absolute left-6 top-6 rounded-full border border-red-300/70 bg-black/35 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-red-200 backdrop-blur-md"
                 style={{ opacity: leftOpacity }}
               >
-                SKIP
+                Pass
               </motion.div>
               <motion.div
-                className="absolute right-6 top-6 rounded-2xl border-2 border-[var(--color-cindr)] bg-black/35 px-4 py-2 text-lg font-black text-[var(--color-cindr)] shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-md rotate-12"
+                className="absolute right-6 top-6 rounded-full border border-[var(--color-cindr)]/70 bg-black/35 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-cindr)] backdrop-blur-md"
                 style={{ opacity: rightOpacity }}
               >
-                LIKE
+                Save
               </motion.div>
               <motion.div
-                className="absolute bottom-36 left-1/2 -translate-x-1/2 rounded-2xl border-2 border-white/60 bg-black/35 px-4 py-2 text-lg font-black text-white shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-md"
+                className="absolute bottom-36 left-1/2 -translate-x-1/2 rounded-full border border-white/35 bg-black/35 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-white/86 backdrop-blur-md"
                 style={{ opacity: upOpacity }}
               >
-                TRAILER ↑
+                Trailer
               </motion.div>
             </>
           )}
 
           <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
-            {/* CindrMatch — highest priority chip */}
             {card.isSuperMatch && (
               <div className="mb-2 flex items-center min-w-0">
-                <motion.span
-                  className="inline-flex min-w-0 items-center gap-1.5 truncate rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-zinc-900"
-                  style={{ boxShadow: "0 2px 22px rgba(251,191,36,0.65), 0 0 8px rgba(251,191,36,0.4)" }}
-                  animate={{ opacity: [0.88, 1, 0.88] }}
-                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                  initial={false}
+                <span
+                  className={`inline-flex min-w-0 items-center gap-1.5 truncate rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                    randomMode
+                      ? "border border-slate-100/25 bg-white/10 text-slate-100"
+                      : "border border-amber-300/30 bg-amber-300/16 text-amber-100"
+                  }`}
                 >
                   <svg className="shrink-0" width="9" height="9" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true">
                     <path d="M4 0L5 3H8L5.5 4.8L6.5 8L4 6.2L1.5 8L2.5 4.8L0 3H3L4 0Z"/>
                   </svg>
                   <span className="truncate">CindrMatch</span>
-                </motion.span>
+                </span>
               </div>
             )}
-            {/* Discovery chip — quality gem outside comfort zone */}
             {!card.isSuperMatch && card.isDiscovery && (
               <div className="mb-2 flex items-center min-w-0">
                 <span className="inline-flex min-w-0 items-center gap-1.5 truncate rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/80 backdrop-blur-sm">
@@ -358,10 +396,9 @@ function SwipeCard({
                 </span>
               </div>
             )}
-            {/* TMDB recommendation chip */}
             {!card.isSuperMatch && !card.isDiscovery && card.becauseOf && showRecommendedChip && (
               <div className="mb-2 flex items-center min-w-0">
-                <span className="inline-flex min-w-0 items-center gap-1.5 truncate rounded-full bg-[var(--color-cindr)] px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-[0_2px_12px_rgba(216,90,48,0.5)]">
+                <span className="inline-flex min-w-0 items-center gap-1.5 truncate rounded-full border border-[var(--color-cindr)]/35 bg-[var(--color-cindr)]/16 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/86">
                   <svg className="shrink-0" width="8" height="8" viewBox="0 0 8 8" fill="currentColor">
                     <path d="M4 0L5 3H8L5.5 4.8L6.5 8L4 6.2L1.5 8L2.5 4.8L0 3H3L4 0Z"/>
                   </svg>
@@ -369,7 +406,7 @@ function SwipeCard({
                 </span>
               </div>
             )}
-            <div className="mb-2.5 h-1 w-10 rounded-full bg-[var(--color-cindr)] shadow-[0_0_18px_rgba(216,90,48,0.5)]" />
+            <div className="mb-2.5 h-px w-12 rounded-full bg-[var(--color-cindr)]/70" />
             <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
               {card.genres.slice(0, 2).map((g) => (
                 <span
@@ -383,7 +420,7 @@ function SwipeCard({
                 {card.language}
               </span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-black tracking-[-0.04em] text-white leading-tight mb-1.5 line-clamp-2">
+            <h2 className="text-xl font-semibold tracking-[-0.035em] text-white leading-tight mb-1.5 line-clamp-2 sm:text-2xl">
               {card.title}
             </h2>
             <div className="flex items-center gap-2 text-xs text-white/65 mb-3">

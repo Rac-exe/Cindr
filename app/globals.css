@@ -16,12 +16,19 @@
 }
 
 :root {
-  --background: #0B0B0F;
-  --foreground: #F0F0F0;
-  --surface: #16161D;
-  --surface-hover: #1E1E28;
-  --border-color: #2A2A35;
-  --muted: #8A8A9A;
+  --background: #09090c;
+  --foreground: #f4f1ed;
+  --surface: #141319;
+  --surface-hover: #1b1a21;
+  --border-color: #2a2730;
+  --muted: #9a948d;
+  --theme-accent: var(--color-cindr);
+  --theme-accent-soft: rgba(216, 90, 48, 0.16);
+  --theme-accent-shadow: rgba(216, 90, 48, 0.18);
+  --ease-cindr-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-cindr-in: cubic-bezier(0.4, 0, 1, 1);
+  --motion-fast: 160ms;
+  --motion-medium: 220ms;
 }
 
 html,
@@ -30,13 +37,30 @@ body {
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at 50% -12%, rgba(216, 90, 48, 0.12), transparent 34rem),
+    linear-gradient(180deg, #0b0b0f 0%, var(--background) 44%);
   color: var(--foreground);
   font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
   overflow-x: hidden;
+}
+
+button,
+a,
+[role="button"] {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:where(a, button, input, textarea, select, [role="button"]):focus-visible {
+  outline: 2px solid rgba(216, 90, 48, 0.72);
+  outline-offset: 3px;
 }
 
 ::-webkit-scrollbar {
@@ -56,6 +80,17 @@ body {
   background: rgba(216, 90, 48, 0.3);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
 .cindr-date-input::-webkit-calendar-picker-indicator {
   opacity: 0;
 }
@@ -66,35 +101,236 @@ body {
   }
 }
 
-@keyframes cindr-reel-drift {
-  0% {
-    transform: rotate(0deg) translate3d(0, 0, 0);
-  }
-  50% {
-    transform: rotate(180deg) translate3d(7px, -9px, 0);
-  }
-  100% {
-    transform: rotate(360deg) translate3d(0, 0, 0);
+@keyframes cindr-reel-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-@keyframes cindr-reel-drift-reverse {
-  0% {
-    transform: rotate(0deg) translate3d(0, 0, 0);
-  }
-  50% {
-    transform: rotate(-180deg) translate3d(-6px, 8px, 0);
-  }
-  100% {
-    transform: rotate(-360deg) translate3d(0, 0, 0);
-  }
-}
-
-@keyframes cindr-film-float {
+@keyframes cindr-cinema-drift {
   0%, 100% {
-    transform: translate3d(0, 0, 0) rotate(var(--cinematic-tilt, 0deg));
+    transform: translate3d(0, 0, 0) rotate(var(--cinema-rotate, 0deg));
   }
   50% {
-    transform: translate3d(0, -10px, 0) rotate(var(--cinematic-tilt, 0deg));
+    transform: translate3d(0, -8px, 0) rotate(var(--cinema-rotate, 0deg));
+  }
+}
+
+@keyframes cindr-logo-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes cindr-random-orbit {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(10px, -10px, 0) rotate(180deg);
+  }
+}
+
+@keyframes cindr-grid-reveal-x {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes cindr-grid-reveal-y {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes cindr-ring-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(1.75rem) scale(0.84);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes cindr-match-aura {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(0.985);
+  }
+  50% {
+    opacity: 0.78;
+    transform: scale(1.025);
+  }
+}
+
+.cinema-reel-slow {
+  animation: cindr-reel-spin var(--cinema-speed, 44s) linear infinite;
+  transform-origin: center;
+}
+
+.cindr-match-aura {
+  animation: cindr-match-aura 2.8s var(--ease-cindr-out) infinite;
+}
+
+.cinema-drift {
+  animation: cindr-cinema-drift var(--cinema-drift-speed, 16s) var(--ease-cindr-out) infinite;
+}
+
+.cindr-logo-orbit {
+  animation: cindr-logo-orbit 18s linear infinite;
+  transform-box: view-box;
+  transform-origin: 24px 24px;
+}
+
+.cinema-random-orbit {
+  animation: cindr-random-orbit var(--random-speed, 36s) linear infinite;
+  transform-origin: center;
+}
+
+.cinema-grid-stage {
+  position: absolute;
+  inset: 0;
+  opacity: 0.04;
+  transform-origin: bottom center;
+  transition:
+    opacity 340ms var(--ease-cindr-out),
+    transform 460ms var(--ease-cindr-out);
+}
+
+.cinema-grid-stage::before,
+.cinema-grid-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-repeat: repeat;
+  background-size: 48px 48px;
+  will-change: clip-path;
+}
+
+.cinema-grid-stage::before {
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.72) 1px, transparent 1px);
+}
+
+.cinema-grid-stage::after {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.72) 1px, transparent 1px);
+}
+
+.cinema-grid-in {
+  opacity: 0.04;
+  transform: translateY(0) scale(1);
+}
+
+.cinema-grid-in::before {
+  animation: cindr-grid-reveal-x 820ms steps(18, end) both;
+}
+
+.cinema-grid-in::after {
+  animation: cindr-grid-reveal-y 920ms steps(14, end) 120ms both;
+}
+
+.cinema-grid-out {
+  opacity: 0;
+  transform: translateY(1.5rem) scale(1.04);
+}
+
+.cinema-ring-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transform-origin: bottom center;
+  transition:
+    opacity 320ms var(--ease-cindr-out),
+    transform 440ms var(--ease-cindr-out);
+}
+
+.cinema-ring {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--ring-size) * -0.56);
+  width: var(--ring-size);
+  height: var(--ring-size);
+  border: 1px solid rgba(226, 232, 240, 0.075);
+  border-radius: 9999px;
+  box-shadow: 0 0 38px rgba(226, 232, 240, 0.018);
+  opacity: 0;
+  transform: translateX(-50%) translateY(1.75rem) scale(0.84);
+  will-change: opacity, transform;
+}
+
+.cinema-rings-in {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.cinema-rings-in .cinema-ring {
+  animation: cindr-ring-enter 620ms var(--ease-cindr-out) both;
+  animation-delay: var(--ring-delay);
+}
+
+.cinema-rings-out {
+  opacity: 0;
+  transform: translateY(2.5rem) scale(0.92);
+}
+
+.nav-motion-icon {
+  transform-origin: center;
+  transition:
+    color var(--motion-medium) var(--ease-cindr-out),
+    opacity var(--motion-medium) var(--ease-cindr-out),
+    transform var(--motion-medium) var(--ease-cindr-out);
+}
+
+.nav-motion-target:hover .nav-motion-icon {
+  transform: translate3d(0, -1px, 0) scale(1.04);
+}
+
+.nav-motion-target:active .nav-motion-icon {
+  transform: translate3d(0, 0, 0) scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cinema-reel-slow,
+  .cinema-drift,
+  .cinema-random-orbit,
+  .cindr-match-aura,
+  .cindr-logo-orbit,
+  .cinema-grid-in::before,
+  .cinema-grid-in::after,
+  .cinema-rings-in .cinema-ring {
+    animation: none !important;
+  }
+
+  .nav-motion-icon,
+  .nav-motion-target:hover .nav-motion-icon,
+  .nav-motion-target:active .nav-motion-icon {
+    transform: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .cindr-match-aura {
+    animation: none !important;
+    opacity: 0.42;
+    transform: none;
+  }
+
+  .cinema-grid-in::before,
+  .cinema-grid-in::after,
+  .cinema-rings-in .cinema-ring {
+    animation-duration: 420ms !important;
+  }
+
+  .cinema-grid-stage::before,
+  .cinema-grid-stage::after,
+  .cinema-ring {
+    will-change: auto;
   }
 }

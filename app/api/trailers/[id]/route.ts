@@ -30,20 +30,27 @@ export async function GET(
       return NextResponse.json({ error: "Invalid media type" }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdmin();
-    const { data: existing, error: selectError } = await supabase
-      .from("media_trailer_registry")
-      .select("*")
-      .eq("tmdb_id", tmdbId)
-      .eq("media_type", mediaType)
-      .maybeSingle();
+    const canUseTrailerRegistry = Boolean(
+      process.env.NEXT_PUBLIC_SUPABASE_URL &&
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    const supabase = canUseTrailerRegistry ? getSupabaseAdmin() : null;
 
-    if (selectError) throw selectError;
+    if (supabase) {
+      const { data: existing, error: selectError } = await supabase
+        .from("media_trailer_registry")
+        .select("*")
+        .eq("tmdb_id", tmdbId)
+        .eq("media_type", mediaType)
+        .maybeSingle();
 
-    if (existing) {
-      return NextResponse.json(
-        toTrailerPayload(existing as MediaTrailerRegistryRow)
-      );
+      if (selectError) throw selectError;
+
+      if (existing) {
+        return NextResponse.json(
+          toTrailerPayload(existing as MediaTrailerRegistryRow)
+        );
+      }
     }
 
     const details =
@@ -56,23 +63,26 @@ export async function GET(
     const resolution = await resolveTrailer(details);
     const now = new Date().toISOString();
 
+    const row: MediaTrailerRegistryRow = {
+      tmdb_id: tmdbId,
+      media_type: mediaType,
+      title: resolution.title,
+      release_year: resolution.releaseYear,
+      youtube_key: resolution.youtubeKey,
+      source: resolution.source,
+      status: resolution.status,
+      resolved_at: now,
+      last_checked_at: now,
+      last_error: resolution.lastError ?? null,
+    };
+
+    if (!supabase) {
+      return NextResponse.json(toTrailerPayload(row));
+    }
+
     const { data: saved, error: upsertError } = await supabase
       .from("media_trailer_registry")
-      .upsert(
-        {
-          tmdb_id: tmdbId,
-          media_type: mediaType,
-          title: resolution.title,
-          release_year: resolution.releaseYear,
-          youtube_key: resolution.youtubeKey,
-          source: resolution.source,
-          status: resolution.status,
-          resolved_at: now,
-          last_checked_at: now,
-          last_error: resolution.lastError ?? null,
-        },
-        { onConflict: "tmdb_id,media_type" }
-      )
+      .upsert(row, { onConflict: "tmdb_id,media_type" })
       .select("*")
       .single();
 

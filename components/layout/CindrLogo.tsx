@@ -9,11 +9,11 @@ export function CindrLogoMark({ className = "h-8 w-8" }: { className?: string })
     <svg
       aria-hidden="true"
       viewBox="0 0 48 48"
-      className={`shrink-0 text-[var(--color-cindr)] drop-shadow-[0_0_14px_rgba(216,90,48,0.35)] ${className}`}
+      className={`cindr-logo-mark shrink-0 text-[var(--color-cindr)] transition-transform duration-200 ease-out hover:scale-[1.02] ${className}`}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <rect width="48" height="48" rx="14" fill="#0B0B0F" />
+      <rect width="48" height="48" rx="14" fill="#0f0e13" />
       <rect
         x="2.5"
         y="2.5"
@@ -21,7 +21,7 @@ export function CindrLogoMark({ className = "h-8 w-8" }: { className?: string })
         height="43"
         rx="11.5"
         stroke="currentColor"
-        strokeOpacity="0.32"
+        strokeOpacity="0.24"
       />
       <g transform="translate(24 24) scale(1.14) translate(-24 -24)">
         <path
@@ -38,8 +38,10 @@ export function CindrLogoMark({ className = "h-8 w-8" }: { className?: string })
           strokeLinecap="round"
         />
         <path d="M28 19.5v9l7-4.5-7-4.5Z" fill="#FAECE7" />
-        <circle cx="34.5" cy="13.5" r="2.5" fill="currentColor" />
-        <circle cx="34.5" cy="34.5" r="2.5" fill="currentColor" />
+        <g className="cindr-logo-orbit">
+          <circle cx="34.5" cy="13.5" r="2.5" fill="currentColor" />
+          <circle cx="34.5" cy="34.5" r="2.5" fill="currentColor" />
+        </g>
       </g>
     </svg>
   );

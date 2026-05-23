@@ -138,20 +138,20 @@ export default function SignupPage() {
   }
 
   const inputClass =
-    "w-full rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] transition-colors focus:border-[var(--color-cindr)] focus:outline-none sm:py-3";
+    "h-11 w-full rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-4 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] transition-colors focus:border-[var(--color-cindr)] focus:outline-none";
 
   return (
     <div className="relative flex h-[100svh] min-h-[100svh] flex-col items-center justify-center overflow-hidden px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-[4.65rem] sm:min-h-screen sm:px-6 sm:pb-10 sm:pt-24">
       <CinematicBackdrop density="balanced" />
       <AppHeader />
-      <div className="relative z-10 max-h-[calc(100svh-5.5rem)] w-full max-w-sm overflow-y-auto rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:rounded-[2rem] sm:p-6">
-        <Link href="/" className="mb-5 block text-center sm:mb-8">
+      <div className="relative z-10 max-h-[calc(100svh-5.5rem)] w-full max-w-sm overflow-y-auto rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:rounded-[2rem] sm:p-6">
+        <Link href="/" className="mb-5 block text-center sm:mb-6">
           <span className="text-2xl font-semibold tracking-tight">
             Cin<span className="text-[var(--color-cindr)]">dr</span>
           </span>
         </Link>
 
-        <h1 className="mb-2 text-center text-xl font-bold">Create account</h1>
+        <h1 className="mb-2 text-center text-xl font-semibold tracking-[-0.02em]">Create account</h1>
         <p className="mb-4 text-center text-sm text-[var(--muted)] sm:mb-6">
           Save movies, build your watchlist, track what you&apos;ve seen.
         </p>
@@ -160,7 +160,7 @@ export default function SignupPage() {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={googleLoading || loading}
-          className="mb-3 flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.08] disabled:opacity-50 sm:py-3"
+          className="mb-3 flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-medium text-white transition-colors hover:bg-white/[0.08] disabled:opacity-50"
         >
           <GoogleIcon />
           {googleLoading ? "Redirecting…" : "Continue with Google"}
@@ -206,7 +206,7 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={openDatePicker}
-                className="absolute right-3 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-white/90 transition-colors hover:bg-white/10 hover:text-white"
+                className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-white/90 transition-colors hover:bg-white/10 hover:text-white"
                 aria-label="Open date picker"
               >
                 <svg
@@ -243,7 +243,7 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-full bg-[var(--color-cindr)] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-cindr-hover)] disabled:opacity-50 sm:py-3"
+            className="h-11 w-full rounded-full bg-[var(--color-cindr)] text-sm font-medium text-white transition-colors hover:bg-[var(--color-cindr-hover)] disabled:opacity-50"
           >
             {loading ? "Creating account..." : "Sign up"}
           </button>

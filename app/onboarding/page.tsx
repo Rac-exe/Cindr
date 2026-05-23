@@ -329,15 +329,15 @@ function OnboardingContent() {
 
   if (view === "advanced") {
     return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center px-3 pb-3 pt-20 sm:px-6 sm:pb-12 sm:pt-24 relative overflow-hidden">
+      <div className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 pb-4 pt-24 sm:px-6 sm:pb-12">
         <OnboardingAtmosphere />
         <AppHeader />
 
-        <div className="w-full max-w-md max-h-[calc(100dvh-6rem)] overflow-y-auto relative z-10 rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:max-h-[calc(100dvh-7rem)] sm:rounded-[2rem] sm:p-7">
+        <div className="relative z-10 max-h-[calc(100dvh-7rem)] w-full max-w-md overflow-y-auto rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:rounded-[2rem] sm:p-6">
           <button
             type="button"
             onClick={() => router.push("/discover")}
-            className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white"
+            className="mb-6 inline-flex h-9 items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white"
           >
             <span>&larr;</span>
             Back to Discover
@@ -367,7 +367,7 @@ function OnboardingContent() {
                   placeholder="From"
                   value={yearFrom}
                   onChange={(event) => setYearFrom(event.target.value)}
-                  className="min-w-0 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-[var(--muted)] focus:border-[var(--color-cindr)]"
+                  className="h-11 min-w-0 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 text-sm text-white outline-none transition-colors placeholder:text-[var(--muted)] focus:border-[var(--color-cindr)]"
                 />
                 <input
                   type="number"
@@ -376,7 +376,7 @@ function OnboardingContent() {
                   placeholder="To"
                   value={yearTo}
                   onChange={(event) => setYearTo(event.target.value)}
-                  className="min-w-0 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-[var(--muted)] focus:border-[var(--color-cindr)]"
+                  className="h-11 min-w-0 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 text-sm text-white outline-none transition-colors placeholder:text-[var(--muted)] focus:border-[var(--color-cindr)]"
                 />
               </div>
             </div>
@@ -393,7 +393,7 @@ function OnboardingContent() {
                       type="button"
                       key={genre.id}
                       onClick={() => toggleGenre(genre.id)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
                         selected
                           ? "border-[var(--color-cindr)] bg-[var(--color-cindr)]/15 text-white"
                           : "border-[var(--border-color)] text-[var(--muted)] hover:border-white/20 hover:text-white"
@@ -432,7 +432,7 @@ function OnboardingContent() {
                       type="button"
                       key={`${person.role}-${person.id}`}
                       onClick={() => removePerson(person)}
-                      className="rounded-full border border-[var(--color-cindr)]/35 bg-[var(--color-cindr)]/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-500/15"
+                      className="inline-flex h-8 items-center rounded-full border border-[var(--color-cindr)]/35 bg-[var(--color-cindr)]/10 px-3 text-xs font-medium text-white transition-colors hover:bg-red-500/15"
                       title="Remove"
                     >
                       {person.name} · {person.role} ×
@@ -443,18 +443,18 @@ function OnboardingContent() {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-[0.45fr_1fr] gap-2.5">
+          <div className="mt-6 grid grid-cols-[0.45fr_1fr] gap-3">
             <button
               type="button"
               onClick={() => router.push("/discover")}
-              className="py-3.5 rounded-full border border-white/10 bg-white/[0.04] text-white/80 font-medium transition-all hover:border-white/20 hover:bg-white/[0.08]"
+              className="h-12 rounded-full border border-white/10 bg-white/[0.04] font-medium text-white/80 transition-colors hover:border-white/20 hover:bg-white/[0.08]"
             >
               Back
             </button>
             <button
               type="button"
               onClick={saveAdvancedFilters}
-              className="py-3.5 rounded-full bg-[var(--color-cindr)] text-white font-medium transition-all hover:bg-[var(--color-cindr-hover)] shadow-[0_0_20px_rgba(216,90,48,0.15)]"
+              className="h-12 rounded-full bg-[var(--color-cindr)] font-medium text-white shadow-[0_18px_50px_rgba(216,90,48,0.18)] transition-colors hover:bg-[var(--color-cindr-hover)]"
             >
               Save filters
             </button>
@@ -465,11 +465,11 @@ function OnboardingContent() {
   }
 
   return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center px-3 pb-3 pt-20 sm:px-6 sm:pb-12 sm:pt-24 relative overflow-hidden">
+      <div className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 pb-4 pt-24 sm:px-6 sm:pb-12">
       <OnboardingAtmosphere />
       <AppHeader />
 
-      <div className="flex flex-col w-full max-w-md relative z-10 rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:rounded-[2rem] sm:p-7" style={{ maxHeight: "calc(100dvh - 6rem)" }}>
+      <div className="relative z-10 flex w-full max-w-md flex-col rounded-[1.5rem] border border-white/10 bg-[#111015]/80 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:rounded-[2rem] sm:p-6" style={{ maxHeight: "calc(100dvh - 7rem)" }}>
         {/* Main progress: 0/2, 1/2, 2/2 */}
         <div className="shrink-0 mb-4 sm:mb-6">
           <div className="flex items-center justify-between mb-1.5 sm:mb-2">
@@ -484,7 +484,7 @@ function OnboardingContent() {
           </div>
           <div className="h-1 w-full rounded-full bg-[var(--border-color)] overflow-hidden">
             <div
-              className="h-full rounded-full bg-[var(--color-cindr)] transition-all duration-500"
+              className="h-full rounded-full bg-[var(--color-cindr)] transition-all duration-300 ease-out"
               style={{ width: `${(mainProgress / 2) * 100}%` }}
             />
           </div>
@@ -528,17 +528,17 @@ function OnboardingContent() {
           )}
         </div>
 
-        <div className="shrink-0 mt-3 grid grid-cols-[0.45fr_1fr] gap-2 sm:mt-4 sm:gap-2.5">
+        <div className="mt-4 grid shrink-0 grid-cols-[0.45fr_1fr] gap-3">
           <button
             onClick={handleBack}
-            className="py-2.5 text-sm rounded-full border border-white/10 bg-white/[0.04] text-white/80 font-medium transition-all hover:border-white/20 hover:bg-white/[0.08] sm:py-3.5 sm:text-base"
+            className="h-12 rounded-full border border-white/10 bg-white/[0.04] text-sm font-medium text-white/80 transition-colors hover:border-white/20 hover:bg-white/[0.08] sm:text-base"
           >
             Back
           </button>
           <button
             onClick={handleNext}
             disabled={!canProceed}
-            className="py-2.5 text-sm rounded-full bg-[var(--color-cindr)] text-white font-medium transition-all hover:bg-[var(--color-cindr-hover)] disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(216,90,48,0.15)] sm:py-3.5 sm:text-base"
+            className="h-12 rounded-full bg-[var(--color-cindr)] text-sm font-medium text-white shadow-[0_18px_50px_rgba(216,90,48,0.18)] transition-colors hover:bg-[var(--color-cindr-hover)] disabled:cursor-not-allowed disabled:opacity-40 sm:text-base"
           >
             {step === "questions" && currentQIndex === dynamicQuestions.length - 1
               ? "Start discovering"
@@ -615,7 +615,7 @@ function PersonSearchField({
         value={query}
         onChange={(event) => handleQueryChange(event.target.value)}
         placeholder={role === "actor" ? "Search actors" : "Search directors"}
-        className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-[var(--muted)] focus:border-[var(--color-cindr)]"
+        className="h-11 w-full rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 text-sm text-white outline-none transition-colors placeholder:text-[var(--muted)] focus:border-[var(--color-cindr)]"
       />
       {(searching || results.length > 0) && (
         <div className="mt-2 max-h-44 overflow-y-auto rounded-xl border border-white/10 bg-black/25 p-1.5">
@@ -628,7 +628,7 @@ function PersonSearchField({
                 key={person.id}
                 onClick={() => handleAdd(person)}
                 disabled={selectedCount >= 5}
-                className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-45"
+                className="flex min-h-11 w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 <span>
                   <span className="block text-sm font-medium">{person.name}</span>
@@ -661,13 +661,13 @@ function LanguageStep({
 }) {
   return (
     <div className="mb-3">
-      <h1 className="text-lg font-bold tracking-tight mb-0.5 sm:text-2xl sm:mb-1">
+      <h1 className="mb-1 text-xl font-semibold tracking-[-0.03em] sm:text-2xl">
         What languages do you watch in?
       </h1>
-      <p className="text-xs text-[var(--muted)] mb-2 sm:mb-4">
+      <p className="mb-4 text-xs text-[var(--muted)]">
         Pick up to {MAX_LANGUAGES}.
       </p>
-      <div className="grid grid-cols-2 gap-1 sm:gap-1.5">
+      <div className="grid grid-cols-2 gap-2">
         {LANGUAGES.map((lang) => {
           const isSelected = selected.includes(lang.code);
           const isDisabled = !isSelected && selected.length >= MAX_LANGUAGES;
@@ -676,7 +676,7 @@ function LanguageStep({
               key={lang.code}
               onClick={() => onToggle(lang.code)}
               disabled={isDisabled}
-              className={`flex items-center gap-1.5 p-1.5 rounded-lg border transition-all text-left sm:gap-2 sm:p-2.5 ${
+              className={`flex min-h-14 items-center gap-2 rounded-xl border p-2.5 text-left transition-colors ${
                 isSelected
                   ? "border-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
                   : isDisabled
@@ -684,12 +684,12 @@ function LanguageStep({
                   : "border-[var(--border-color)] bg-[var(--surface)] hover:border-[var(--muted)]"
               }`}
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-[8px] font-semibold uppercase tracking-wide text-[var(--color-cindr)] sm:h-7 sm:w-7 sm:text-[9px]">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[9px] font-semibold uppercase tracking-wide text-[var(--color-cindr)]">
                 {lang.code}
               </span>
               <div className="min-w-0">
-                <div className="truncate text-[11px] font-medium sm:text-xs">{lang.name}</div>
-                <div className="truncate text-[9px] text-[var(--muted)] sm:text-[10px]">
+                <div className="truncate text-xs font-medium">{lang.name}</div>
+                <div className="truncate text-[10px] text-[var(--muted)]">
                   {lang.nativeName}
                 </div>
               </div>
@@ -710,18 +710,18 @@ function ContentTypeStep({
 }) {
   return (
     <div className="mb-4 sm:mb-8">
-      <h1 className="text-xl font-bold tracking-tight mb-1 sm:text-2xl sm:mb-2">
+      <h1 className="mb-2 text-xl font-semibold tracking-[-0.03em] sm:text-2xl">
         What are you looking for?
       </h1>
-      <p className="text-xs text-[var(--muted)] mb-3 sm:text-sm sm:mb-6">Pick all that apply.</p>
-      <div className="grid grid-cols-2 gap-1.5 sm:gap-2.5">
+      <p className="mb-5 text-xs text-[var(--muted)] sm:text-sm">Pick all that apply.</p>
+      <div className="grid grid-cols-2 gap-3">
         {CONTENT_TYPES.map((type) => {
           const isSelected = selected.includes(type.value);
           return (
             <button
               key={type.value}
               onClick={() => onToggle(type.value)}
-              className={`p-3 rounded-xl border transition-all text-left sm:p-4 ${
+              className={`min-h-14 rounded-xl border p-4 text-left transition-colors ${
                 isSelected
                   ? "border-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
                   : "border-[var(--border-color)] bg-[var(--surface)] hover:border-[var(--muted)]"
@@ -747,22 +747,22 @@ function QuestionStep({
 }) {
   return (
     <div className="mb-4 sm:mb-8">
-      <h1 className="text-xl font-bold tracking-tight mb-1 sm:text-2xl sm:mb-2">
+      <h1 className="mb-2 text-xl font-semibold tracking-[-0.03em] sm:text-2xl">
         {question.question}
       </h1>
       {question.multi && (
-        <p className="text-xs text-[var(--muted)] mb-3 sm:text-sm sm:mb-6">
+        <p className="mb-5 text-xs text-[var(--muted)] sm:text-sm">
           Pick as many as you like.
         </p>
       )}
-      <div className="flex flex-col gap-1.5 mt-3 sm:gap-2.5 sm:mt-4">
+      <div className="mt-4 flex flex-col gap-3">
         {question.options.map((opt) => {
           const isSelected = answers.includes(opt.value);
           return (
             <button
               key={opt.value}
               onClick={() => onToggle(opt.value)}
-              className={`flex items-center justify-between p-3 rounded-xl border transition-all text-left sm:p-4 ${
+              className={`flex min-h-12 items-center justify-between rounded-xl border p-4 text-left transition-colors ${
                 isSelected
                   ? "border-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
                   : "border-[var(--border-color)] bg-[var(--surface)] hover:border-[var(--muted)]"
@@ -778,7 +778,7 @@ function QuestionStep({
                 {opt.label}
               </span>
               {isSelected && (
-                <span className="w-5 h-5 rounded-full bg-[var(--color-cindr)] flex items-center justify-center flex-shrink-0">
+                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-cindr)]">
                   <svg
                     width="12"
                     height="12"

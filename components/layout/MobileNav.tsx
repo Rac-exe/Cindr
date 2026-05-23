@@ -84,7 +84,7 @@ export default function MobileNav() {
 
   return (
     <>
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-[var(--background)]/90 py-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] backdrop-blur-lg border-t border-[var(--border-color)] lg:hidden">
+    <nav className="fixed bottom-3 left-3 right-3 z-50 flex min-h-16 items-center justify-around rounded-2xl border border-white/10 bg-[#0d0c11]/82 px-1 py-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] shadow-[0_18px_60px_rgba(0,0,0,0.34)] backdrop-blur-xl lg:hidden">
       {NAV_ITEMS.map((item) => {
         const active = pathname.startsWith(item.href);
         const Icon = item.icon as Icon;
@@ -92,7 +92,7 @@ export default function MobileNav() {
           return (
             <div key={item.href} ref={prefsRef} className="relative">
               {prefsOpen && (
-                <div className="fixed bottom-20 left-4 right-4 z-50 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                <div className="fixed bottom-24 left-4 right-4 z-50 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-xl">
                   <Link
                     href="/onboarding?mode=quiz"
                     onClick={() => setPrefsOpen(false)}
@@ -122,19 +122,15 @@ export default function MobileNav() {
               <button
                 type="button"
                 onClick={() => setPrefsOpen((current) => !current)}
-                className={`flex min-w-16 flex-col items-center gap-0.5 rounded-2xl px-2 py-1.5 transition-all ${
+                className={`nav-motion-target flex min-h-12 min-w-16 flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-1.5 transition-colors ${
                   active
-                    ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)] shadow-[0_0_24px_rgba(216,90,48,0.18)]"
-                    : "text-[var(--muted)] hover:text-white"
+                    ? "bg-white/[0.08] text-[var(--color-cindr)]"
+                    : "text-white/56 hover:bg-white/[0.05] hover:text-white"
                 }`}
                 aria-expanded={prefsOpen}
                 aria-haspopup="menu"
               >
-                <Icon
-                  size={20}
-                  weight={active ? "fill" : "regular"}
-                  className={active ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]" : ""}
-                />
+                <Icon size={20} weight={active ? "fill" : "regular"} className="nav-motion-icon" />
                 <span className="text-[9px] font-medium tracking-wide">
                   {item.label}
                 </span>
@@ -146,7 +142,7 @@ export default function MobileNav() {
           return (
             <div key={item.href} ref={profileRef} className="relative">
               {profileOpen && (
-                <div className="fixed bottom-20 left-4 right-4 z-50 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                <div className="fixed bottom-24 left-4 right-4 z-50 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-xl">
                   <Link
                     href="/profile"
                     onClick={() => setProfileOpen(false)}
@@ -186,19 +182,15 @@ export default function MobileNav() {
               <button
                 type="button"
                 onClick={() => setProfileOpen((current) => !current)}
-                className={`flex min-w-16 flex-col items-center gap-0.5 rounded-2xl px-2 py-1.5 transition-all ${
+                className={`nav-motion-target flex min-h-12 min-w-16 flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-1.5 transition-colors ${
                   active
-                    ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)] shadow-[0_0_24px_rgba(216,90,48,0.18)]"
-                    : "text-[var(--muted)] hover:text-white"
+                    ? "bg-white/[0.08] text-[var(--color-cindr)]"
+                    : "text-white/56 hover:bg-white/[0.05] hover:text-white"
                 }`}
                 aria-expanded={profileOpen}
                 aria-haspopup="menu"
               >
-                <Icon
-                  size={20}
-                  weight={active ? "fill" : "regular"}
-                  className={active ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]" : ""}
-                />
+                <Icon size={20} weight={active ? "fill" : "regular"} className="nav-motion-icon" />
                 <span className="text-[9px] font-medium tracking-wide">
                   {item.label}
                 </span>
@@ -210,17 +202,13 @@ export default function MobileNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex min-w-16 flex-col items-center gap-0.5 rounded-2xl px-2 py-1.5 transition-all ${
+            className={`nav-motion-target flex min-h-12 min-w-16 flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-1.5 transition-colors ${
               active
-                ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)] shadow-[0_0_24px_rgba(216,90,48,0.18)]"
-                : "text-[var(--muted)] hover:text-white"
+                ? "bg-white/[0.08] text-[var(--color-cindr)]"
+                : "text-white/56 hover:bg-white/[0.05] hover:text-white"
             }`}
           >
-            <Icon
-              size={20}
-              weight={active ? "fill" : "regular"}
-              className={active ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]" : ""}
-            />
+            <Icon size={20} weight={active ? "fill" : "regular"} className="nav-motion-icon" />
             <span className="text-[9px] font-medium tracking-wide">
               {item.label}
             </span>
