@@ -89,14 +89,14 @@ const ANIME_QUESTIONS: QuizQuestion[] = [
 const DOCUMENTARY_QUESTIONS: QuizQuestion[] = [
   {
     id: "doc_topic",
-    question: "What topics fascinate you?",
+    question: "What draws you to a documentary?",
     options: [
-      { label: "True crime & mysteries", value: "true_crime" },
-      { label: "Nature & wildlife", value: "nature" },
-      { label: "History & politics", value: "history" },
-      { label: "Science & technology", value: "science" },
-      { label: "Music & culture", value: "culture" },
-      { label: "Sports", value: "sports" },
+      { label: "A case I can't look away from", value: "true_crime" },
+      { label: "History, politics & war", value: "history" },
+      { label: "Culture, music & art", value: "culture" },
+      { label: "People and their stories", value: "social" },
+      { label: "Science, nature & exploration", value: "science" },
+      { label: "Sport, competition & survival", value: "sports" },
     ],
     multi: true,
   },
@@ -148,9 +148,9 @@ export const TV_MOOD_TO_GENRES: Record<string, number[]> = {
   thriller: [80, 9648],
   comedy: [35],
   drama: [18],
-  scifi: [10765, 9648],
-  horror: [9648],
-  romance: [18],
+  scifi: [10765],
+  horror: [27, 9648],
+  romance: [10749, 18],
   crime: [80, 9648],
   scifi_fantasy: [10765],
   reality: [10764],
@@ -176,19 +176,19 @@ export const ANIME_TV_MOOD_TO_GENRES: Record<string, number[]> = {
 };
 
 export const DOCUMENTARY_MOVIE_TOPIC_GENRES: Record<string, number[]> = {
-  true_crime: [80],
-  nature: [],
-  history: [36],
-  science: [],
-  culture: [10402],
-  sports: [],
+  true_crime: [80, 9648],
+  history:    [36, 10752],
+  culture:    [10402],
+  social:     [18],
+  science:    [],
+  sports:     [],
 };
 
 export const DOCUMENTARY_TV_TOPIC_GENRES: Record<string, number[]> = {
-  true_crime: [80],
-  nature: [],
-  history: [],
-  science: [],
-  culture: [],
-  sports: [],
+  true_crime: [80, 9648],
+  history:    [10768],
+  culture:    [18],
+  social:     [18],
+  science:    [],
+  sports:     [],
 };
