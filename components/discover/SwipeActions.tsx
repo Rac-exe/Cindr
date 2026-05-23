@@ -107,6 +107,7 @@ export default function SwipeActions({ onSkip, onLike, onOpenTrailer, dragDirect
           />
         </svg>
       </button>
+
     </div>
   );
 }

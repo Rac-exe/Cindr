@@ -16,6 +16,8 @@ interface SwipeDeckProps {
   onOpenTrailer?: () => void;
   trailerOpen?: boolean;
   discoverMode?: string;
+  onUndo?: () => void;
+  canUndo?: boolean;
 }
 
 export default function SwipeDeck({
@@ -26,6 +28,8 @@ export default function SwipeDeck({
   onOpenTrailer,
   trailerOpen,
   discoverMode,
+  onUndo,
+  canUndo,
 }: SwipeDeckProps) {
   const visibleCards = cards.slice(0, 3);
   const [actionRequest, setActionRequest] = useState<{
@@ -46,7 +50,7 @@ export default function SwipeDeck({
   }
 
   return (
-    <div className="relative mx-auto h-[clamp(310px,calc(100svh-21rem),460px)] w-[min(84vw,360px)] sm:h-[min(calc(100dvh-24rem),540px)] sm:w-[min(92vw,430px)] md:h-[min(calc(100dvh-22rem),620px)] md:w-[min(92vw,440px)]">
+    <div className="relative mx-auto h-[clamp(340px,calc(100svh-16.5rem),560px)] w-[min(84vw,360px)] sm:h-[min(calc(100dvh-22rem),560px)] sm:w-[min(92vw,430px)] md:h-[min(calc(100dvh-22rem),620px)] md:w-[min(92vw,440px)]">
       {visibleCards.map((card, i) => (
         <SwipeCard
           key={`${card.media_type ?? "movie"}-${card.id}`}
@@ -58,6 +62,7 @@ export default function SwipeDeck({
           swipeRequest={i === 0 ? activeRequest : undefined}
           onDragChange={i === 0 ? setDragDirection : undefined}
           onOpenTrailer={i === 0 ? onOpenTrailer : undefined}
+          trailerOpen={trailerOpen}
           showRecommendedChip={discoverMode === "taste"}
         />
       ))}
@@ -69,6 +74,14 @@ export default function SwipeDeck({
           dragDirection={dragDirection}
           trailerOpen={trailerOpen}
         />
+      )}
+      {canUndo && onUndo && visibleCards.length > 0 && (
+        <button
+          onClick={onUndo}
+          className="absolute -bottom-[5.75rem] right-0 z-20 h-6 rounded-full border border-white/10 bg-[#111015]/90 px-3 text-[11px] font-medium text-white/55 backdrop-blur-md transition-colors hover:border-[var(--color-cindr)]/40 hover:text-white/85 active:scale-95 sm:-bottom-[6.5rem]"
+        >
+          Undo
+        </button>
       )}
     </div>
   );
@@ -83,6 +96,7 @@ function SwipeCard({
   swipeRequest,
   onDragChange,
   onOpenTrailer,
+  trailerOpen,
   showRecommendedChip,
 }: {
   card: MovieCardData;
@@ -93,6 +107,7 @@ function SwipeCard({
   swipeRequest?: { direction: "left" | "right"; nonce: number; cardId: number };
   onDragChange?: (dir: "left" | "right" | "up" | null) => void;
   onOpenTrailer?: () => void;
+  trailerOpen?: boolean;
   showRecommendedChip?: boolean;
 }) {
   const [exitingDirection, setExitingDirection] = useState<"left" | "right" | null>(null);
@@ -192,7 +207,7 @@ function SwipeCard({
         rotate: isTop ? rotate : 0,
         zIndex: 10 - index,
       }}
-      drag={isTop ? true : false}
+      drag={isTop && !trailerOpen}
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.9}
       onDragEnd={isTop ? handleDragEnd : undefined}
