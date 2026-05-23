@@ -340,10 +340,10 @@ export default function TrailerDialog({
 
         <motion.div
           className="relative w-full max-w-lg max-h-[90vh] touch-pan-y overflow-y-auto overscroll-contain rounded-t-2xl border border-white/15 bg-[var(--surface)]/95 shadow-[0_28px_100px_rgba(0,0,0,0.6)] backdrop-blur-md sm:rounded-2xl"
-          initial={{ y: "100%" }}
-          animate={{ y: 0 }}
-          exit={{ y: "100%" }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          initial={{ opacity: 0, y: 28 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 18 }}
+          transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
         >
           {movie || preview ? (
             <>
@@ -379,13 +379,13 @@ export default function TrailerDialog({
                 </div>
               ) : null}
 
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-4 mb-3">
+              <div className="p-5 sm:p-6">
+                <div className="mb-4 flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-xl font-bold leading-tight">
+                    <h2 className="text-xl font-semibold leading-tight tracking-[-0.02em]">
                       {displayTitle}
                     </h2>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-[var(--muted)]">
+                    <div className="mt-1.5 flex items-center gap-2 text-xs text-[var(--muted)]">
                       {displayYear && <span>{displayYear}</span>}
                       {mediaType === "tv" && (
                         <>
@@ -409,15 +409,15 @@ export default function TrailerDialog({
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={handleShare}
-                      className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+                      className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full transition-colors hover:bg-white/10"
                       aria-label="Share"
                     >
                       <svg
-                        width="20"
-                        height="20"
+                        width="18"
+                        height="18"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -433,12 +433,12 @@ export default function TrailerDialog({
                     </button>
                     <button
                       onClick={onClose}
-                      className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+                      className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full transition-colors hover:bg-white/10"
                       aria-label="Close"
                     >
                       <svg
-                        width="20"
-                        height="20"
+                        width="18"
+                        height="18"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -457,11 +457,11 @@ export default function TrailerDialog({
                 )}
 
                 {movie?.genres && movie.genres.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-3">
+                  <div className="mb-4 flex flex-wrap gap-2">
                     {movie.genres.map((g) => (
                       <span
                         key={g.id}
-                        className="text-[10px] font-medium px-2.5 py-1 rounded-full bg-white/10 text-white/70"
+                        className="inline-flex h-7 items-center rounded-full bg-white/10 px-3 text-[10px] font-medium text-white/70"
                       >
                         {g.name}
                       </span>
@@ -492,12 +492,12 @@ export default function TrailerDialog({
                     title={activeInteraction?.favourite ? "Remove favourite" : "Add favourite"}
                     className={`grid h-12 w-full place-items-center rounded-xl border transition-colors disabled:opacity-50 ${
                       activeInteraction?.favourite
-                        ? "border-red-400/60 bg-red-500/15 text-red-200 shadow-[0_0_18px_rgba(248,113,113,0.16)]"
+                        ? "border-red-400/55 bg-red-500/14 text-red-200"
                         : "border-[var(--border-color)] text-white/75 hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-100"
                     }`}
                   >
                     <Star
-                      size={21}
+                      size={20}
                       weight={activeInteraction?.favourite ? "fill" : "regular"}
                     />
                   </button>
@@ -515,12 +515,12 @@ export default function TrailerDialog({
                     title={activeInteraction?.watched ? "Mark as unwatched" : "Mark as watched"}
                     className={`grid h-12 w-full place-items-center rounded-xl border transition-colors disabled:opacity-50 ${
                       activeInteraction?.watched
-                        ? "border-red-400/60 bg-red-500/15 text-red-200 shadow-[0_0_18px_rgba(248,113,113,0.16)]"
+                        ? "border-red-400/55 bg-red-500/14 text-red-200"
                         : "border-[var(--border-color)] text-white/75 hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-100"
                     }`}
                   >
                     <Eye
-                      size={21}
+                      size={20}
                       weight={activeInteraction?.watched ? "fill" : "regular"}
                     />
                   </button>
@@ -533,18 +533,18 @@ export default function TrailerDialog({
                     title={activeInteraction?.liked ? "Unlike" : "Like"}
                     className={`grid h-12 w-full place-items-center rounded-xl border transition-colors disabled:opacity-50 ${
                       activeInteraction?.liked
-                        ? "border-red-400/60 bg-red-500/15 text-red-200 shadow-[0_0_18px_rgba(248,113,113,0.16)]"
+                        ? "border-red-400/55 bg-red-500/14 text-red-200"
                         : "border-[var(--border-color)] text-white/75 hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-100"
                     }`}
                   >
                     <Heart
-                      size={21}
+                      size={20}
                       weight={activeInteraction?.liked ? "fill" : "regular"}
                     />
                   </button>
                 </div>
 
-                <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
                       Your Cindr rating
@@ -562,7 +562,7 @@ export default function TrailerDialog({
                       <button
                         key={value}
                         onClick={() => handleRating(value)}
-                        className={`h-8 rounded-lg text-xs font-semibold transition-colors ${
+                        className={`h-9 rounded-lg text-xs font-semibold transition-colors ${
                           rating === value
                             ? "bg-[var(--color-cindr)] text-white"
                             : "bg-white/[0.08] text-white/70 hover:bg-white/[0.14] hover:text-white"
@@ -587,7 +587,7 @@ export default function TrailerDialog({
                           href={getProviderSearchUrl(p.provider_name)}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-[var(--border-color)] transition-colors hover:border-[var(--color-cindr)]/45 hover:bg-white/10"
+                          className="flex h-9 items-center gap-2 rounded-xl border border-[var(--border-color)] bg-white/5 px-3 transition-colors hover:border-[var(--color-cindr)]/45 hover:bg-white/10"
                         >
                           <Image
                             src={`https://image.tmdb.org/t/p/w45${p.logo_path}`}
@@ -612,10 +612,10 @@ export default function TrailerDialog({
                   </div>
                 )}
 
-                <div className="flex gap-2.5">
+                <div className="flex gap-3">
                   <button
                     onClick={onClose}
-                    className="flex-1 py-3 rounded-xl bg-[var(--color-cindr)] text-white text-sm font-medium hover:bg-[var(--color-cindr-hover)] transition-colors"
+                    className="h-12 flex-1 rounded-xl bg-[var(--color-cindr)] text-sm font-medium text-white transition-colors hover:bg-[var(--color-cindr-hover)]"
                   >
                     Keep swiping
                   </button>

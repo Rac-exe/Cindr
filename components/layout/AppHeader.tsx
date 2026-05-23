@@ -96,7 +96,7 @@ export default function AppHeader() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-[var(--background)]/80 backdrop-blur-lg border-b border-[var(--border-color)] md:px-5 md:py-4">
+      <header className="fixed left-3 right-3 top-3 z-50 flex min-h-16 items-center justify-between rounded-2xl border border-white/10 bg-[#0d0c11]/72 px-3 py-2.5 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl md:left-5 md:right-5 md:px-4">
         <Link href="/" className="flex items-center" aria-label="Cindr home">
           <CindrLogo markClassName="h-8 w-8" textClassName="text-xl" />
         </Link>
@@ -113,27 +113,27 @@ export default function AppHeader() {
             <button
               type="button"
               onClick={() => setPrefsOpen((current) => !current)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+              className={`inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium transition-colors ${
                 pathname.startsWith("/onboarding")
-                  ? "text-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
-                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                  ? "bg-white/[0.08] text-white"
+                  : "text-white/58 hover:bg-white/[0.06] hover:text-white"
               }`}
               aria-expanded={prefsOpen}
               aria-haspopup="menu"
             >
               <SlidersHorizontal
-                size={16}
+                size={18}
                 weight={pathname.startsWith("/onboarding") ? "fill" : "regular"}
                 className={
                   pathname.startsWith("/onboarding")
-                    ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.55)]"
+                    ? "text-[var(--color-cindr)]"
                     : ""
                 }
               />
               Preferences
             </button>
             {prefsOpen && (
-              <div className="absolute right-0 top-[2.35rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
+              <div className="absolute right-0 top-[3rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-xl">
                 <Link
                   href="/onboarding?mode=quiz"
                   onClick={() => setPrefsOpen(false)}
@@ -171,27 +171,27 @@ export default function AppHeader() {
             <button
               type="button"
               onClick={() => setProfileOpen((current) => !current)}
-              className={`grid h-9 w-9 place-items-center rounded-lg text-sm transition-colors ${
+              className={`grid h-10 w-10 place-items-center rounded-xl text-sm transition-colors ${
                 pathname.startsWith("/profile")
-                  ? "text-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
-                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                  ? "bg-white/[0.08] text-white"
+                  : "text-white/58 hover:bg-white/[0.06] hover:text-white"
               }`}
               aria-label="Open profile menu"
               aria-expanded={profileOpen}
               aria-haspopup="menu"
             >
               <UserCircle
-                size={22}
+                size={20}
                 weight={pathname.startsWith("/profile") ? "fill" : "regular"}
                 className={
                   pathname.startsWith("/profile")
-                    ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.55)]"
+                    ? "text-[var(--color-cindr)]"
                     : ""
                 }
               />
             </button>
             {profileOpen && (
-              <div className="absolute right-0 top-[2.35rem] w-56 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
+              <div className="absolute right-0 top-[3rem] w-56 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-xl">
                 <Link
                   href="/profile"
                   onClick={() => setProfileOpen(false)}
@@ -232,24 +232,19 @@ export default function AppHeader() {
           </nav>
         )}
         {!isLanding && (
-          <nav className="flex items-center gap-1.5 lg:hidden" aria-label="Mobile navigation">
+          <nav className="flex items-center gap-1 lg:hidden" aria-label="Mobile navigation">
             <Link
               href="/discover"
-              className={`grid h-9 w-9 place-items-center rounded-xl transition-colors ${
+              className={`grid h-11 w-11 place-items-center rounded-xl transition-colors ${
                 pathname.startsWith("/discover")
-                  ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)]"
-                  : "text-[var(--muted)] hover:bg-white/[0.06] hover:text-white"
+                  ? "bg-white/[0.08] text-[var(--color-cindr)]"
+                  : "text-white/58 hover:bg-white/[0.06] hover:text-white"
               }`}
               aria-label="Discover"
             >
               <FilmSlate
                 size={20}
                 weight={pathname.startsWith("/discover") ? "fill" : "regular"}
-                className={
-                  pathname.startsWith("/discover")
-                    ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]"
-                    : ""
-                }
               />
             </Link>
 
@@ -260,10 +255,10 @@ export default function AppHeader() {
                   setPrefsOpen((current) => !current);
                   setProfileOpen(false);
                 }}
-                className={`grid h-9 w-9 place-items-center rounded-xl transition-colors ${
+                className={`grid h-11 w-11 place-items-center rounded-xl transition-colors ${
                   pathname.startsWith("/onboarding")
-                    ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)]"
-                    : "text-[var(--muted)] hover:bg-white/[0.06] hover:text-white"
+                    ? "bg-white/[0.08] text-[var(--color-cindr)]"
+                    : "text-white/58 hover:bg-white/[0.06] hover:text-white"
                 }`}
                 aria-label="Open preferences menu"
                 aria-expanded={prefsOpen}
@@ -272,15 +267,10 @@ export default function AppHeader() {
                 <SlidersHorizontal
                   size={20}
                   weight={pathname.startsWith("/onboarding") ? "fill" : "regular"}
-                  className={
-                    pathname.startsWith("/onboarding")
-                      ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]"
-                      : ""
-                  }
                 />
               </button>
               {prefsOpen && (
-                <div className="absolute right-0 top-[3rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                <div className="absolute right-0 top-[3.25rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-xl">
                   <Link
                     href="/onboarding?mode=quiz"
                     onClick={() => setPrefsOpen(false)}
@@ -316,27 +306,22 @@ export default function AppHeader() {
                   setProfileOpen((current) => !current);
                   setPrefsOpen(false);
                 }}
-                className={`grid h-9 w-9 place-items-center rounded-xl transition-colors ${
+                className={`grid h-11 w-11 place-items-center rounded-xl transition-colors ${
                   mobileProfileActive
-                    ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)]"
-                    : "text-[var(--muted)] hover:bg-white/[0.06] hover:text-white"
+                    ? "bg-white/[0.08] text-[var(--color-cindr)]"
+                    : "text-white/58 hover:bg-white/[0.06] hover:text-white"
                 }`}
                 aria-label="Open profile menu"
                 aria-expanded={profileOpen}
                 aria-haspopup="menu"
               >
                 <UserCircle
-                  size={21}
+                  size={20}
                   weight={mobileProfileActive ? "fill" : "regular"}
-                  className={
-                    mobileProfileActive
-                      ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]"
-                      : ""
-                  }
                 />
               </button>
               {profileOpen && (
-                <div className="absolute right-0 top-[3rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                <div className="absolute right-0 top-[3.25rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-xl">
                 <Link
                   href="/profile"
                   onClick={() => setProfileOpen(false)}
@@ -428,17 +413,17 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+      className={`inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium transition-colors ${
         active
-          ? "text-[var(--color-cindr)] bg-[var(--color-cindr)]/10"
-          : "text-[var(--muted)] hover:text-[var(--foreground)]"
+          ? "bg-white/[0.08] text-white"
+          : "text-white/58 hover:bg-white/[0.06] hover:text-white"
       }`}
     >
       {NavIcon && (
         <NavIcon
-          size={16}
+          size={18}
           weight={active ? "fill" : "regular"}
-          className={active ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.55)]" : ""}
+          className={active ? "text-[var(--color-cindr)]" : ""}
         />
       )}
       {label}

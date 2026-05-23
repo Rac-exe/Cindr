@@ -140,7 +140,7 @@ export default async function SharedMoviePage({ params }: SharePageProps) {
               )}
             </div>
 
-            <h1 className="text-4xl font-black tracking-tight text-white sm:text-5xl">
+            <h1 className="text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">
               {movie.title}
             </h1>
 
@@ -181,7 +181,7 @@ export default async function SharedMoviePage({ params }: SharePageProps) {
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/discover"
-                className="rounded-full bg-[var(--color-cindr)] px-6 py-3 text-center text-sm font-semibold text-white shadow-[0_0_20px_rgba(216,90,48,0.18)] transition-colors hover:bg-[var(--color-cindr-hover)]"
+                className="rounded-full bg-[var(--color-cindr)] px-6 py-3 text-center text-sm font-semibold text-white shadow-[0_18px_50px_rgba(216,90,48,0.18)] transition-colors hover:bg-[var(--color-cindr-hover)]"
               >
                 Discover on Cindr
               </Link>

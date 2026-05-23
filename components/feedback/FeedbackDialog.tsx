@@ -50,7 +50,7 @@ export default function FeedbackDialog({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4 py-8 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#111015] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
+      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#111015] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)] sm:p-6">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--color-cindr)]">
@@ -66,20 +66,20 @@ export default function FeedbackDialog({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-white/10 px-3 py-1.5 text-sm text-white/65 transition-colors hover:bg-white/[0.06] hover:text-white"
+            className="inline-flex h-9 items-center rounded-full border border-white/10 px-3 text-sm text-white/65 transition-colors hover:bg-white/[0.06] hover:text-white"
           >
             Close
           </button>
         </div>
 
         <form onSubmit={handleFeedbackSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.04] p-1">
+          <div className="grid grid-cols-2 gap-1 rounded-2xl bg-white/[0.04] p-1">
             {(["feedback", "issue"] as FeedbackCategory[]).map((category) => (
               <button
                 key={category}
                 type="button"
                 onClick={() => setFeedbackCategory(category)}
-                className={`rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                className={`h-10 rounded-xl px-3 text-sm font-medium transition-colors ${
                   feedbackCategory === category
                     ? "bg-[var(--color-cindr)] text-white"
                     : "text-white/65 hover:bg-white/[0.06] hover:text-white"
@@ -99,7 +99,7 @@ export default function FeedbackDialog({
               onChange={(event) => setFeedbackMessage(event.target.value)}
               rows={5}
               placeholder="Example: The trailer opened but would not play on mobile..."
-              className="w-full resize-none rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/30 focus:border-[var(--color-cindr)]/60"
+              className="w-full resize-none rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm leading-6 text-white outline-none transition-colors placeholder:text-white/30 focus:border-[var(--color-cindr)]/60"
             />
           </label>
 
@@ -113,14 +113,14 @@ export default function FeedbackDialog({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-white/10 px-4 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={feedbackSubmitting}
-              className="rounded-full bg-[var(--color-cindr)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-cindr-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-11 items-center justify-center rounded-full bg-[var(--color-cindr)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-cindr-hover)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {feedbackSubmitting ? "Sending..." : "Submit"}
             </button>

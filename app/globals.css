@@ -16,12 +16,16 @@
 }
 
 :root {
-  --background: #0B0B0F;
-  --foreground: #F0F0F0;
-  --surface: #16161D;
-  --surface-hover: #1E1E28;
-  --border-color: #2A2A35;
-  --muted: #8A8A9A;
+  --background: #09090c;
+  --foreground: #f4f1ed;
+  --surface: #141319;
+  --surface-hover: #1b1a21;
+  --border-color: #2a2730;
+  --muted: #9a948d;
+  --ease-cindr-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-cindr-in: cubic-bezier(0.4, 0, 1, 1);
+  --motion-fast: 160ms;
+  --motion-medium: 220ms;
 }
 
 html,
@@ -30,13 +34,30 @@ body {
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at 50% -12%, rgba(216, 90, 48, 0.12), transparent 34rem),
+    linear-gradient(180deg, #0b0b0f 0%, var(--background) 44%);
   color: var(--foreground);
   font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
   overflow-x: hidden;
+}
+
+button,
+a,
+[role="button"] {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:where(a, button, input, textarea, select, [role="button"]):focus-visible {
+  outline: 2px solid rgba(216, 90, 48, 0.72);
+  outline-offset: 3px;
 }
 
 ::-webkit-scrollbar {
@@ -56,6 +77,17 @@ body {
   background: rgba(216, 90, 48, 0.3);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
 .cindr-date-input::-webkit-calendar-picker-indicator {
   opacity: 0;
 }
@@ -63,38 +95,5 @@ body {
 @keyframes shimmer {
   100% {
     transform: translateX(100%);
-  }
-}
-
-@keyframes cindr-reel-drift {
-  0% {
-    transform: rotate(0deg) translate3d(0, 0, 0);
-  }
-  50% {
-    transform: rotate(180deg) translate3d(7px, -9px, 0);
-  }
-  100% {
-    transform: rotate(360deg) translate3d(0, 0, 0);
-  }
-}
-
-@keyframes cindr-reel-drift-reverse {
-  0% {
-    transform: rotate(0deg) translate3d(0, 0, 0);
-  }
-  50% {
-    transform: rotate(-180deg) translate3d(-6px, 8px, 0);
-  }
-  100% {
-    transform: rotate(-360deg) translate3d(0, 0, 0);
-  }
-}
-
-@keyframes cindr-film-float {
-  0%, 100% {
-    transform: translate3d(0, 0, 0) rotate(var(--cinematic-tilt, 0deg));
-  }
-  50% {
-    transform: translate3d(0, -10px, 0) rotate(var(--cinematic-tilt, 0deg));
   }
 }

@@ -210,10 +210,10 @@ export default function WatchlistPage() {
     <div className="min-h-screen flex flex-col relative overflow-hidden">
       <CinematicBackdrop density="subtle" />
       <AppHeader />
-      <main className="flex-1 pt-20 pb-10 md:pb-8 px-4 max-w-2xl mx-auto w-full relative z-10">
-        <div className="rounded-[2rem] border border-white/10 bg-[#111015]/82 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">Watchlist</h1>
+      <main className="relative z-10 mx-auto w-full max-w-2xl flex-1 px-4 pb-10 pt-24 md:pb-8">
+        <div className="rounded-[2rem] border border-white/10 bg-[#111015]/82 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:p-6">
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <h1 className="text-2xl font-semibold tracking-[-0.03em]">Watchlist</h1>
           {filtered.length > 0 && (
             <button
               type="button"
@@ -221,7 +221,7 @@ export default function WatchlistPage() {
                 setSelectionMode((current) => !current);
                 setSelectedIds([]);
               }}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`inline-flex h-9 items-center rounded-full border px-3 text-xs font-semibold transition-colors ${
                 selectionMode
                   ? "border-[var(--color-cindr)]/45 bg-[var(--color-cindr)]/12 text-[var(--color-cindr)]"
                   : "border-white/10 bg-white/[0.04] text-white/65 hover:text-white"
@@ -238,12 +238,12 @@ export default function WatchlistPage() {
           </div>
         )}
 
-        <div className="flex gap-1 mb-6 p-1 rounded-xl bg-white/[0.04] border border-white/10 overflow-x-auto">
+        <div className="mb-6 flex gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.04] p-1">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => handleTabChange(t.key)}
-              className={`flex-1 whitespace-nowrap py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+              className={`h-10 flex-1 whitespace-nowrap rounded-xl px-3 text-xs font-medium transition-colors sm:text-sm ${
                 tab === t.key
                   ? "bg-[var(--color-cindr)] text-white"
                   : "text-[var(--muted)] hover:text-[var(--foreground)]"
@@ -255,7 +255,7 @@ export default function WatchlistPage() {
         </div>
 
         {selectionMode && filtered.length > 0 && (
-          <div className="mb-4 flex items-center justify-between gap-2 rounded-full border border-white/10 bg-white/[0.035] p-1">
+          <div className="mb-4 flex min-h-11 items-center justify-between gap-2 rounded-full border border-white/10 bg-white/[0.035] p-1">
             <button
               type="button"
               onClick={() =>
@@ -265,7 +265,7 @@ export default function WatchlistPage() {
                     : filtered.map((movie) => movie.id)
                 )
               }
-              className="rounded-full px-3 py-1.5 text-xs font-semibold text-white/65 transition-colors hover:bg-white/[0.06] hover:text-white"
+              className="inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold text-white/65 transition-colors hover:bg-white/[0.06] hover:text-white"
             >
               {selectedCount === filtered.length ? "Clear" : "All"}
             </button>
@@ -276,18 +276,18 @@ export default function WatchlistPage() {
               type="button"
               onClick={removeSelectedFromCurrentTab}
               disabled={selectedCount === 0 || bulkRemoving}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-cindr)] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-cindr-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--color-cindr)] px-3 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-cindr-hover)] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <Trash size={13} weight="bold" />
+              <Trash size={14} weight="bold" />
               {bulkRemoving ? "Removing" : "Remove"}
             </button>
           </div>
         )}
 
         {filtered.length === 0 ? (
-          <div className="text-center py-16 px-4 text-sm text-[var(--muted)] rounded-[1.5rem] border border-white/10 bg-black/20">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-full border border-[var(--color-cindr)]/45 flex items-center justify-center text-[var(--color-cindr)]">
-              <svg width="30" height="30" viewBox="0 0 60 60" fill="none" aria-hidden="true">
+          <div className="rounded-[1.5rem] border border-white/10 bg-black/20 px-5 py-16 text-center text-sm text-[var(--muted)]">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--color-cindr)]/45 text-[var(--color-cindr)]">
+              <svg width="26" height="26" viewBox="0 0 60 60" fill="none" aria-hidden="true">
                 <circle cx="30" cy="30" r="26" stroke="currentColor" strokeWidth="3" />
                 <path d="M24 18l18 12-18 12V18z" fill="currentColor" />
               </svg>
@@ -295,7 +295,7 @@ export default function WatchlistPage() {
             No {tab} titles yet. Swipe right, save, or rate something to start building this.
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
             {filtered.map((movie) => (
               <div
                 key={movie.id}
@@ -308,7 +308,7 @@ export default function WatchlistPage() {
                     handleCardClick(movie);
                   }
                 }}
-                className={`group relative aspect-[2/3] cursor-pointer overflow-hidden rounded-xl border transition-colors ${
+                className={`group relative aspect-[2/3] cursor-pointer overflow-hidden rounded-2xl border transition-colors ${
                   selectedIds.includes(movie.id)
                     ? "border-[var(--color-cindr)]/80"
                     : "border-[var(--border-color)] hover:border-[var(--color-cindr)]/45"
@@ -327,26 +327,26 @@ export default function WatchlistPage() {
                     {movie.title}
                   </div>
                 )}
-                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-                  <p className="text-[10px] font-medium text-white leading-tight line-clamp-2">
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/82 to-transparent p-3">
+                  <p className="line-clamp-2 text-[11px] font-medium leading-tight text-white">
                     {movie.title}
                   </p>
-                  <div className="mt-1 flex items-center gap-1">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1">
                     {movie.media_type === "tv" && (
-                      <span className="text-[8px] text-[var(--color-cindr)]">TV</span>
+                      <span className="rounded-full border border-[var(--color-cindr)]/30 px-1.5 py-0.5 text-[8px] font-semibold text-[var(--color-cindr)]">TV</span>
                     )}
                     {movie.favourite && (
-                      <span className="rounded-full bg-yellow-400/90 px-1.5 py-0.5 text-[8px] font-bold text-black">
+                      <span className="rounded-full bg-yellow-400/90 px-1.5 py-0.5 text-[8px] font-semibold text-black">
                         Star
                       </span>
                     )}
                     {movie.watched && (
-                      <span className="rounded-full bg-green-400/90 px-1.5 py-0.5 text-[8px] font-bold text-black">
+                      <span className="rounded-full bg-green-400/90 px-1.5 py-0.5 text-[8px] font-semibold text-black">
                         Watched
                       </span>
                     )}
                     {movie.rating && (
-                      <span className="rounded-full bg-[var(--color-cindr)] px-1.5 py-0.5 text-[8px] font-bold text-white">
+                      <span className="rounded-full bg-[var(--color-cindr)] px-1.5 py-0.5 text-[8px] font-semibold text-white">
                         {movie.rating}/10
                       </span>
                     )}
@@ -355,26 +355,26 @@ export default function WatchlistPage() {
 
                 {selectionMode && (
                   <div
-                    className={`absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full border backdrop-blur-md transition-colors ${
+                    className={`absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full border backdrop-blur-md transition-colors ${
                       selectedIds.includes(movie.id)
                         ? "border-[var(--color-cindr)] bg-[var(--color-cindr)] text-white"
                         : "border-white/20 bg-black/35 text-white/45"
                     }`}
                   >
                     {selectedIds.includes(movie.id) && (
-                      <Check size={15} weight="bold" />
+                      <Check size={16} weight="bold" />
                     )}
                   </div>
                 )}
 
                 {!selectionMode && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/55 p-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/55 p-3 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         openMovie(movie);
                       }}
-                      className="w-full rounded-lg border border-white/15 bg-white/10 py-1.5 text-[10px] font-medium text-white"
+                      className="h-9 w-full rounded-xl border border-white/15 bg-white/10 text-[11px] font-medium text-white transition-colors hover:bg-white/15"
                     >
                       Open details
                     </button>
@@ -383,7 +383,7 @@ export default function WatchlistPage() {
                         e.stopPropagation();
                         handleShare(movie);
                       }}
-                      className="w-full rounded-lg bg-white/10 py-1.5 text-[10px] font-medium text-white"
+                      className="h-9 w-full rounded-xl bg-white/10 text-[11px] font-medium text-white transition-colors hover:bg-white/15"
                     >
                       Share
                     </button>

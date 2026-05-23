@@ -167,7 +167,7 @@ function PosterSkeleton({ message }: { message: string }) {
             />
           ))}
         </div>
-        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.25s_infinite] bg-gradient-to-r from-transparent via-white/12 to-transparent" />
+        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_ease-out_infinite] bg-gradient-to-r from-transparent via-white/8 to-transparent" />
         <div className="absolute inset-x-12 top-1/2 h-20 -translate-y-1/2 rounded-full bg-[var(--color-cindr)]/8 blur-2xl" />
         <div className="absolute inset-0 rounded-[1.75rem] ring-1 ring-inset ring-white/10" />
         <div className="absolute bottom-6 left-6 right-6 space-y-3">
@@ -213,7 +213,7 @@ function ModeToggle({
             onMouseLeave={() => setHovered(null)}
             className={`rounded-full px-2.5 py-1.5 text-[10px] font-bold capitalize leading-none tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
               mode === m
-                ? "bg-[var(--color-cindr)] text-white shadow-[0_0_18px_rgba(216,90,48,0.28)]"
+                ? "bg-[var(--color-cindr)] text-white shadow-[0_12px_30px_rgba(216,90,48,0.16)]"
                 : "text-white/48 hover:bg-white/[0.05] hover:text-white"
             }`}
           >
@@ -637,18 +637,18 @@ export default function DiscoverPage() {
     }
   }
 
-  function openTrailerDialog(movieSelection: {
+  const openTrailerDialog = useCallback((movieSelection: {
     id: number;
     mediaType: "movie" | "tv";
     preview: MovieCardData;
     initialInteraction?: { liked: boolean };
-  }) {
+  }) => {
     if (!modalHistoryPushed.current) {
       window.history.pushState({ cindrTrailer: true }, "", window.location.href);
       modalHistoryPushed.current = true;
     }
     setSelectedMovie(movieSelection);
-  }
+  }, []);
 
   function handleSwipeStart(id: number, direction: "left" | "right") {
     addSwipedId(id);
@@ -758,7 +758,7 @@ export default function DiscoverPage() {
     }
   }
 
-  function openCurrentTrailer() {
+  const openCurrentTrailer = useCallback(() => {
     const topCard = cards[0];
     if (!topCard || selectedMovie) return;
     openTrailerDialog({
@@ -766,7 +766,7 @@ export default function DiscoverPage() {
       mediaType: topCard.media_type ?? "movie",
       preview: topCard,
     });
-  }
+  }, [cards, openTrailerDialog, selectedMovie]);
 
   function handleSwipe(id: number) {
     setSwipeRequest(undefined);
@@ -886,7 +886,7 @@ export default function DiscoverPage() {
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [cards, requestKeyboardSwipe, selectedMovie]);
+  }, [cards, openCurrentTrailer, requestKeyboardSwipe, selectedMovie]);
 
   return (
     <div className="relative flex h-[100svh] min-h-[100svh] flex-col overflow-hidden md:h-[100dvh] md:min-h-[100dvh]">
@@ -902,8 +902,10 @@ export default function DiscoverPage() {
           {cards.length > 0 ? (
             <motion.div
               key="deck"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
               className="flex-1 min-h-0 w-full"
             >
               <SwipeDeck
@@ -924,6 +926,7 @@ export default function DiscoverPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col items-center gap-4"
             >
               <PosterSkeleton message={message} />

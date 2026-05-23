@@ -27,7 +27,7 @@ export default function AboutCindrPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--color-cindr)]">
             About Cindr
           </p>
-          <h1 className="mt-4 text-4xl font-black tracking-[-0.06em] text-white sm:text-5xl">
+          <h1 className="mt-4 text-4xl font-semibold tracking-[-0.06em] text-white sm:text-5xl">
             Find the movie faster.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-white/58 sm:text-base">
@@ -38,8 +38,8 @@ export default function AboutCindrPage() {
           </blockquote>
         </section>
 
-        <section className="mt-12 rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 backdrop-blur-md sm:p-7">
-          <SectionHeading eyebrow="How to use it" title="Four taps. Thats it." />
+        <section className="mt-12 rounded-[2rem] border border-white/10 bg-white/[0.035] p-5 backdrop-blur-md sm:p-6">
+          <SectionHeading eyebrow="How to use it" title="Four taps. That's it." />
           <div className="mt-6 grid gap-2 sm:grid-cols-4">
             {HOW_TO_USE.map((step, index) => (
               <div
@@ -55,7 +55,7 @@ export default function AboutCindrPage() {
           </div>
         </section>
 
-        <section className="mt-8 rounded-[2rem] border border-white/10 bg-[#111015]/70 p-6 text-center backdrop-blur-md sm:p-7">
+        <section className="mt-8 rounded-[2rem] border border-white/10 bg-[#111015]/70 p-5 text-center backdrop-blur-md sm:p-6">
           <SectionHeading eyebrow="Built by Prabhat" title="Made for people who hate choosing forever." centered />
           <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-white/58">
             A cleaner way to discover movies without drowning in tabs, lists,
@@ -71,9 +71,9 @@ export default function AboutCindrPage() {
                 rel="noopener noreferrer"
                 aria-label={label}
                 title={label}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/72 transition-colors hover:border-[var(--color-cindr)]/40 hover:bg-white/[0.08] hover:text-white"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/72 transition-colors hover:border-[var(--color-cindr)]/40 hover:bg-white/[0.08] hover:text-white"
               >
-                <Icon size={17} weight="bold" />
+                <Icon size={18} weight="bold" />
               </a>
             ))}
           </div>
@@ -101,7 +101,7 @@ function SectionHeading({
       <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--color-cindr)]">
         {eyebrow}
       </p>
-      <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-white sm:text-3xl">
+      <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-white sm:text-3xl">
         {title}
       </h2>
     </div>
