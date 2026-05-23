@@ -11,6 +11,7 @@ const LOCAL_DISCOVER_RESULTS: Movie[] = [
   {
     id: 27205,
     title: "Inception",
+    original_title: "Inception",
     overview:
       "A skilled thief enters dreams to plant an idea inside a target's mind.",
     poster_path: "/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg",
@@ -21,11 +22,13 @@ const LOCAL_DISCOVER_RESULTS: Movie[] = [
     popularity: 95,
     genre_ids: [28, 878, 53],
     original_language: "en",
+    adult: false,
     media_type: "movie",
   },
   {
     id: 155,
     title: "The Dark Knight",
+    original_title: "The Dark Knight",
     overview:
       "Batman faces a criminal mastermind who throws Gotham into chaos.",
     poster_path: "/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
@@ -36,11 +39,13 @@ const LOCAL_DISCOVER_RESULTS: Movie[] = [
     popularity: 90,
     genre_ids: [28, 80, 18],
     original_language: "en",
+    adult: false,
     media_type: "movie",
   },
   {
     id: 157336,
     title: "Interstellar",
+    original_title: "Interstellar",
     overview:
       "Explorers travel through a wormhole in search of a future for humanity.",
     poster_path: "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
@@ -51,11 +56,13 @@ const LOCAL_DISCOVER_RESULTS: Movie[] = [
     popularity: 92,
     genre_ids: [12, 18, 878],
     original_language: "en",
+    adult: false,
     media_type: "movie",
   },
   {
     id: 438631,
     title: "Dune",
+    original_title: "Dune",
     overview:
       "A gifted young man travels to a dangerous desert planet with a vast destiny.",
     poster_path: "/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
@@ -66,6 +73,7 @@ const LOCAL_DISCOVER_RESULTS: Movie[] = [
     popularity: 88,
     genre_ids: [12, 878],
     original_language: "en",
+    adult: false,
     media_type: "movie",
   },
 ];

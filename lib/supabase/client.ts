@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -7,6 +7,30 @@ type LocalUser = {
   id: string;
   email: string;
   user_metadata: Record<string, unknown>;
+};
+
+type TasteFingerprintRow = {
+  user_id: string;
+  fingerprint: unknown;
+  swipe_count: number;
+  updated_at: string;
+};
+
+type ClientDatabase = {
+  public: {
+    Tables: {
+      taste_fingerprints: {
+        Row: TasteFingerprintRow;
+        Insert: TasteFingerprintRow;
+        Update: Partial<TasteFingerprintRow>;
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
 };
 
 const LOCAL_USER_KEY = "cindr_local_user";
@@ -134,6 +158,6 @@ function createLocalSupabaseClient() {
 
 export const supabase = (
   supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey)
+    ? createClient<ClientDatabase>(supabaseUrl, supabaseAnonKey)
     : createLocalSupabaseClient()
-) as ReturnType<typeof createClient> & ReturnType<typeof createLocalSupabaseClient>;
+) as SupabaseClient<ClientDatabase> & ReturnType<typeof createLocalSupabaseClient>;

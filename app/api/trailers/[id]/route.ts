@@ -63,7 +63,7 @@ export async function GET(
     const resolution = await resolveTrailer(details);
     const now = new Date().toISOString();
 
-    const row: MediaTrailerRegistryRow = {
+    const row = {
       tmdb_id: tmdbId,
       media_type: mediaType,
       title: resolution.title,
