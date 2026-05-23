@@ -208,7 +208,7 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
           {phase === 5 && (
             <motion.div key="cta" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={COPY_TRANSITION} className="text-center flex flex-col items-center gap-6">
               <p className="text-2xl font-semibold tracking-[-0.04em] text-white sm:text-3xl">Ready to find your reel?</p>
-              <button onClick={onDone} className="rounded-full bg-[var(--color-cindr)] px-8 py-3.5 text-base font-semibold text-white shadow-[0_18px_50px_rgba(216,90,48,0.22)] transition-colors hover:bg-[var(--color-cindr-hover)] active:scale-[0.97] sm:px-10 sm:py-4 sm:text-lg">
+              <button onClick={onDone} className="rounded-full bg-[var(--color-cindr)] px-8 py-3.5 text-base font-semibold text-white shadow-[0_18px_50px_rgba(216,90,48,0.22)] transition-colors hover:bg-[var(--color-cindr-hover)] active:scale-[0.98] sm:px-10 sm:py-4 sm:text-lg">
                 Set your taste
               </button>
             </motion.div>
@@ -308,8 +308,8 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
                 >
                   {/* Skip */}
                   <motion.div
-                    animate={phase === 2 ? { scale: [1, 1.035, 1] } : { scale: 1 }}
-                    transition={{ duration: 0.26, ease: EASE_OUT }}
+                    animate={phase === 2 ? { scale: 1.018 } : { scale: 1 }}
+                    transition={{ duration: 0.18, ease: EASE_OUT }}
                     className="grid h-11 w-11 place-items-center rounded-full border border-red-400/45 bg-[#14141b]/90 text-red-300 sm:h-12 sm:w-12"
                   >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -318,14 +318,10 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
                   {/* Trailer pill */}
                   <motion.div
                     animate={phase === 3 ? {
-                      scale: [1, 1.025, 1],
-                      boxShadow: [
-                        "0 0 0 1px rgba(216,90,48,0.28) inset",
-                        "0 0 0 1px rgba(216,90,48,0.58) inset",
-                        "0 0 0 1px rgba(216,90,48,0.28) inset",
-                      ],
+                      scale: 1.012,
+                      boxShadow: "0 0 0 1px rgba(216,90,48,0.58) inset",
                     } : { scale: 1, boxShadow: "0 0 0 1px rgba(216,90,48,0.28) inset" }}
-                    transition={{ duration: 0.26, ease: EASE_OUT }}
+                    transition={{ duration: 0.18, ease: EASE_OUT }}
                     className="flex h-9 items-center gap-1.5 rounded-full bg-[var(--color-cindr)]/10 px-3.5 sm:h-10 sm:px-4"
                   >
                     <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--color-cindr)]/20">
@@ -336,8 +332,8 @@ export default function OnboardingIntro({ onDone }: { onDone: () => void }) {
 
                   {/* Like */}
                   <motion.div
-                    animate={phase === 1 ? { scale: [1, 1.035, 1] } : { scale: 1 }}
-                    transition={{ duration: 0.26, ease: EASE_OUT }}
+                    animate={phase === 1 ? { scale: 1.018 } : { scale: 1 }}
+                    transition={{ duration: 0.18, ease: EASE_OUT }}
                     className="grid h-12 w-12 place-items-center rounded-full border border-[var(--color-cindr)]/60 bg-[var(--color-cindr)] text-white sm:h-14 sm:w-14"
                   >
                     <svg width="26" height="26" viewBox="0 0 32 32" fill="none">

@@ -84,7 +84,7 @@ export default function SwipeDeck({
             <div className="flex w-[min(84vw,360px)] justify-end sm:w-[min(92vw,430px)]">
               <button
                 onClick={onUndo}
-                className="h-7 rounded-full border border-white/10 bg-[#111015]/88 px-3 text-[11px] font-medium text-white/58 backdrop-blur-md transition-colors hover:bg-white/[0.06] hover:text-white active:scale-95"
+                className="h-7 rounded-full border border-white/10 bg-[#111015]/88 px-3 text-[11px] font-medium text-white/58 backdrop-blur-md transition-colors hover:bg-white/[0.06] hover:text-white active:scale-[0.98]"
               >
                 Undo
               </button>

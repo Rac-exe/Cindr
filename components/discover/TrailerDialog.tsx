@@ -470,9 +470,9 @@ export default function TrailerDialog({
                 )}
                 {loading && !movie?.genres?.length && (
                   <div className="mb-3 flex gap-1.5" aria-label="Loading details">
-                    <span className="h-6 w-16 animate-pulse rounded-full bg-white/10" />
-                    <span className="h-6 w-20 animate-pulse rounded-full bg-white/10" />
-                    <span className="h-6 w-12 animate-pulse rounded-full bg-white/10" />
+                    <span className="h-6 w-16 rounded-full bg-white/10" />
+                    <span className="h-6 w-20 rounded-full bg-white/10" />
+                    <span className="h-6 w-12 rounded-full bg-white/10" />
                   </div>
                 )}
 
@@ -604,10 +604,10 @@ export default function TrailerDialog({
                 )}
                 {loading && displayProviders.length === 0 && (
                   <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                    <div className="h-3 w-28 animate-pulse rounded-full bg-white/10" />
+                    <div className="h-3 w-28 rounded-full bg-white/10" />
                     <div className="mt-3 flex gap-2">
-                      <span className="h-8 w-20 animate-pulse rounded-lg bg-white/8" />
-                      <span className="h-8 w-24 animate-pulse rounded-lg bg-white/8" />
+                      <span className="h-8 w-20 rounded-lg bg-white/8" />
+                      <span className="h-8 w-24 rounded-lg bg-white/8" />
                     </div>
                   </div>
                 )}

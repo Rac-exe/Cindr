@@ -484,7 +484,7 @@ function OnboardingContent() {
           </div>
           <div className="h-1 w-full rounded-full bg-[var(--border-color)] overflow-hidden">
             <div
-              className="h-full rounded-full bg-[var(--color-cindr)] transition-all duration-500"
+              className="h-full rounded-full bg-[var(--color-cindr)] transition-all duration-300 ease-out"
               style={{ width: `${(mainProgress / 2) * 100}%` }}
             />
           </div>
