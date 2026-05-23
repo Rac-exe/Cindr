@@ -92,6 +92,11 @@ export function addLikedId(id: number): void {
   }
 }
 
+export function removeLikedId(id: number): void {
+  const current = getGuestState();
+  saveGuestState({ likedIds: current.likedIds.filter((likedId) => likedId !== id) });
+}
+
 export function getLikedIds(): number[] {
   return getGuestState().likedIds;
 }

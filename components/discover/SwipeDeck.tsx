@@ -64,6 +64,11 @@ export default function SwipeDeck({
     setActionRequest({ direction, nonce, cardId: topCard.id });
   }
 
+  function handleSwipeComplete(id: number, direction: "left" | "right") {
+    setActionRequest(null);
+    onSwipe(id, direction);
+  }
+
   return (
     <div className="flex h-full w-full flex-col items-center">
       <div className="relative mx-auto mt-1 aspect-[2/3] h-[min(58svh,590px)] min-h-0 max-h-[590px] w-auto max-w-[min(86vw,430px)] sm:h-[min(62svh,630px)] md:h-[min(64svh,650px)]">
@@ -73,7 +78,7 @@ export default function SwipeDeck({
             card={card}
             index={i}
             onSwipeStart={onSwipeStart}
-            onSwipe={onSwipe}
+            onSwipe={handleSwipeComplete}
             isTop={i === 0}
             swipeRequest={i === 0 ? activeRequest : undefined}
             onDragChange={i === 0 ? setDragDirection : undefined}
@@ -268,7 +273,7 @@ function SwipeCard({
     >
       {card.isSuperMatch && (
         <div
-          className={`cindr-match-aura pointer-events-none absolute -inset-5 rounded-[2.25rem] blur-2xl ${
+          className={`cindr-match-aura pointer-events-none absolute -inset-3 rounded-[2.25rem] blur-xl sm:-inset-5 sm:blur-2xl ${
             randomMode
               ? "bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.22),rgba(226,232,240,0.1)_36%,transparent_72%)]"
               : "bg-[radial-gradient(ellipse_at_center,rgba(251,191,36,0.34),rgba(216,90,48,0.14)_36%,transparent_72%)]"
@@ -317,17 +322,6 @@ function SwipeCard({
         <div className="relative h-full w-full overflow-hidden rounded-[calc(1.75rem-1px)] bg-[var(--surface)]">
           {card.posterUrl ? (
             <>
-              <Image
-                src={card.posterUrl}
-                alt=""
-                fill
-                sizes="(max-width: 640px) 84vw, 430px"
-                priority={index === 0}
-                loading="eager"
-                className="scale-110 object-cover opacity-45 blur-xl"
-                draggable={false}
-                aria-hidden="true"
-              />
               <Image
                 src={card.posterUrl}
                 alt={card.title}

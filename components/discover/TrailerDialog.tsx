@@ -432,8 +432,11 @@ export default function TrailerDialog({
               </motion.section>
 
               <motion.section
-                className="max-h-[calc(100svh-2.5rem)] overflow-y-auto rounded-[1.75rem] border border-white/12 bg-[var(--surface)]/95 p-5 shadow-[0_28px_90px_rgba(0,0,0,0.55)] backdrop-blur-xl sm:p-6"
+                className="relative max-h-[calc(100svh-2.5rem)] overflow-y-auto rounded-[1.75rem] border border-white/14 bg-[#15131b]/72 p-5 shadow-[0_28px_90px_rgba(0,0,0,0.52)] backdrop-blur-2xl sm:p-6"
               >
+                <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(135deg,rgba(255,255,255,0.08),transparent_34%,rgba(255,255,255,0.025))]" />
+                <div className="pointer-events-none absolute inset-0 rounded-[inherit] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_0_42px_rgba(255,255,255,0.025)]" />
+                <div className="relative z-10">
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
                     <h2 className="text-2xl font-semibold leading-tight tracking-[-0.035em] text-white">
@@ -531,6 +534,7 @@ export default function TrailerDialog({
                     </div>
                   </div>
                 )}
+                </div>
               </motion.section>
             </motion.div>
           ) : (

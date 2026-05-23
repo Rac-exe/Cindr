@@ -314,3 +314,23 @@ button:disabled {
     transform: none !important;
   }
 }
+
+@media (max-width: 640px) {
+  .cindr-match-aura {
+    animation: none !important;
+    opacity: 0.42;
+    transform: none;
+  }
+
+  .cinema-grid-in::before,
+  .cinema-grid-in::after,
+  .cinema-rings-in .cinema-ring {
+    animation-duration: 420ms !important;
+  }
+
+  .cinema-grid-stage::before,
+  .cinema-grid-stage::after,
+  .cinema-ring {
+    will-change: auto;
+  }
+}

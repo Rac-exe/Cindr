@@ -10,6 +10,7 @@ import {
   queuePendingInteraction,
   savePreferences,
   addLikedId,
+  removeLikedId,
   getLikedIds,
 } from "@/lib/guest/storage";
 import {
@@ -95,6 +96,11 @@ type DiscoverBatchResult = {
 type CachedDiscoverDeck = {
   cards: MovieCardData[];
   page: number;
+};
+
+type LastSwipe = {
+  card: MovieCardData;
+  direction: "left" | "right";
 };
 
 const DEFAULT_DISCOVER_PREFERENCES: UserPreferences = {
@@ -256,10 +262,9 @@ export default function DiscoverPage() {
     preview: MovieCardData;
     initialInteraction?: { liked: boolean };
   } | null>(null);
-  const [lastSwipe, setLastSwipe] = useState<{
-    card: MovieCardData;
-    direction: "left" | "right";
-  } | null>(null);
+  const [lastSwipeByMode, setLastSwipeByMode] = useState<
+    Partial<Record<DiscoverMode, LastSwipe>>
+  >({});
   const emptyRetryCount = useRef(0);
   const tasteProfileRef = useRef<TasteProfile>(loadTasteProfile());
   const fetchCountRef = useRef(0);
@@ -276,6 +281,7 @@ export default function DiscoverPage() {
   const prefetchingModesRef = useRef<Set<DiscoverMode>>(new Set());
   const skipNextForegroundFetchRef = useRef<DiscoverMode | null>(null);
   const isRandomMode = preferences.discoverMode === "random";
+  const currentLastSwipe = lastSwipeByMode[preferences.discoverMode] ?? null;
   const themeStyle = {
     "--theme-accent": isRandomMode ? "#E5E7EB" : "var(--color-cindr)",
     "--theme-accent-soft": isRandomMode
@@ -724,7 +730,6 @@ export default function DiscoverPage() {
       } else {
         setPage(1);
       }
-      setLastSwipe(null);
       setMessage(findingMessage(nextMode));
       savePreferences({ discoverMode: nextMode });
 
@@ -754,7 +759,11 @@ export default function DiscoverPage() {
     addSwipedId(id);
     const card = cards.find((c) => c.id === id);
     if (card) {
-      setLastSwipe({ card, direction });
+      const activeMode = preferences.discoverMode;
+      setLastSwipeByMode((current) => ({
+        ...current,
+        [activeMode]: { card, direction },
+      }));
     }
 
     // Update taste profile on every swipe (like or skip)
@@ -893,11 +902,20 @@ export default function DiscoverPage() {
   }, [cards]);
 
   function undoLastSwipe() {
+    const lastSwipe = currentLastSwipe;
     if (!lastSwipe) return;
+    const activeMode = preferences.discoverMode;
     removeSwipedId(lastSwipe.card.id);
+    if (lastSwipe.direction === "right") {
+      likedIdsRef.current.delete(lastSwipe.card.id);
+      removeLikedId(lastSwipe.card.id);
+    }
     setCards((prev) => {
-      if (prev.some((card) => card.id === lastSwipe.card.id)) return prev;
-      return [lastSwipe.card, ...prev];
+      const nextCards = prev.some((card) => card.id === lastSwipe.card.id)
+        ? prev
+        : [lastSwipe.card, ...prev];
+      cacheDeck(preferences.discoverMode, nextCards, page);
+      return nextCards;
     });
 
     if (lastSwipe.direction === "right") {
@@ -912,7 +930,11 @@ export default function DiscoverPage() {
       );
     }
 
-    setLastSwipe(null);
+    setLastSwipeByMode((current) => {
+      const next = { ...current };
+      delete next[activeMode];
+      return next;
+    });
   }
 
   useEffect(() => {
@@ -1037,7 +1059,7 @@ export default function DiscoverPage() {
                 discoverMode={preferences.discoverMode}
                 modeTransitionNonce={modeTransitionNonce}
                 onUndo={undoLastSwipe}
-                canUndo={!!lastSwipe && !selectedMovie}
+                canUndo={!!currentLastSwipe && !selectedMovie}
               />
             </motion.div>
           ) : (
