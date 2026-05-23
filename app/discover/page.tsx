@@ -26,7 +26,6 @@ import type { DiscoverMode, UserPreferences } from "@/types/user";
 import SwipeDeck from "@/components/discover/SwipeDeck";
 import TrailerDialog from "@/components/discover/TrailerDialog";
 import AppHeader from "@/components/layout/AppHeader";
-import MobileNav from "@/components/layout/MobileNav";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 import { prewarmTrailers } from "@/lib/client/trailerCache";
 import {
@@ -804,7 +803,7 @@ export default function DiscoverPage() {
     <div className="relative flex h-[100svh] min-h-[100svh] flex-col overflow-hidden md:h-[100dvh] md:min-h-[100dvh]">
       <CinematicBackdrop density="subtle" />
       <AppHeader />
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center px-3 pb-[calc(6.25rem+env(safe-area-inset-bottom))] pt-[4.65rem] sm:px-4 md:pt-16 md:pb-28">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-start px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[5rem] sm:px-4 md:justify-center md:pt-16 md:pb-28">
         <ModeToggle
           mode={preferences.discoverMode}
           disabled={!preferencesReady}
@@ -826,6 +825,8 @@ export default function DiscoverPage() {
                 onOpenTrailer={openCurrentTrailer}
                 trailerOpen={!!selectedMovie}
                 discoverMode={preferences.discoverMode}
+                onUndo={undoLastSwipe}
+                canUndo={!!lastSwipe && !selectedMovie}
               />
             </motion.div>
           ) : (
@@ -840,17 +841,7 @@ export default function DiscoverPage() {
             </motion.div>
           )}
         </AnimatePresence>
-        {lastSwipe && !selectedMovie && (
-          <button
-            onClick={undoLastSwipe}
-            className="fixed bottom-[calc(9.25rem+env(safe-area-inset-bottom))] right-3 z-40 rounded-full border border-white/10 bg-[#111015]/90 px-3.5 py-2 text-xs font-semibold text-white/85 shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:border-[var(--color-cindr)]/45 hover:text-white md:bottom-10 md:right-6"
-          >
-            Undo
-          </button>
-        )}
       </main>
-      <MobileNav />
-
       {selectedMovie && (
         <TrailerDialog
           key={`${selectedMovie.mediaType}-${selectedMovie.id}`}

@@ -9,7 +9,6 @@ import {
 } from "@/lib/supabase/core";
 import type { SavedMovie } from "@/types/user";
 import AppHeader from "@/components/layout/AppHeader";
-import MobileNav from "@/components/layout/MobileNav";
 import Link from "next/link";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 import TrailerDialog from "@/components/discover/TrailerDialog";
@@ -203,7 +202,6 @@ export default function WatchlistPage() {
             </div>
           </div>
         </main>
-        <MobileNav />
       </div>
     );
   }
@@ -212,7 +210,7 @@ export default function WatchlistPage() {
     <div className="min-h-screen flex flex-col relative overflow-hidden">
       <CinematicBackdrop density="subtle" />
       <AppHeader />
-      <main className="flex-1 pt-20 pb-24 md:pb-8 px-4 max-w-2xl mx-auto w-full relative z-10">
+      <main className="flex-1 pt-20 pb-10 md:pb-8 px-4 max-w-2xl mx-auto w-full relative z-10">
         <div className="rounded-[2rem] border border-white/10 bg-[#111015]/82 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
         <div className="mb-5 flex items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">Watchlist</h1>
@@ -397,7 +395,6 @@ export default function WatchlistPage() {
         )}
         </div>
       </main>
-      <MobileNav />
       {selectedMovie && (
         <TrailerDialog
           movieId={selectedMovie.id}

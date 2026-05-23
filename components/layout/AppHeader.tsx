@@ -22,6 +22,8 @@ import type { FeedbackCategory } from "@/types/user";
 export default function AppHeader() {
   const pathname = usePathname();
   const isLanding = pathname === "/";
+  const mobileProfileActive =
+    pathname.startsWith("/profile") || pathname.startsWith("/watchlist");
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -29,6 +31,7 @@ export default function AppHeader() {
     useState<FeedbackCategory>("feedback");
   const [isSignedIn, setIsSignedIn] = useState(false);
   const prefsRef = useRef<HTMLDivElement>(null);
+  const mobilePrefsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const mobileProfileRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +52,10 @@ export default function AppHeader() {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
-      if (prefsRef.current && !prefsRef.current.contains(event.target as Node)) {
+      const insidePrefs =
+        Boolean(prefsRef.current?.contains(target)) ||
+        Boolean(mobilePrefsRef.current?.contains(target));
+      if (!insidePrefs) {
         setPrefsOpen(false);
       }
       const insideProfile =
@@ -194,14 +200,6 @@ export default function AppHeader() {
                   <UserCircle size={18} />
                   Profile
                 </Link>
-                <Link
-                  href="/about"
-                  onClick={() => setProfileOpen(false)}
-                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white"
-                >
-                  <Info size={18} />
-                  About Cindr
-                </Link>
                 <button
                   type="button"
                   onClick={() => openFeedbackModal("feedback")}
@@ -210,6 +208,14 @@ export default function AppHeader() {
                   <ChatCircleText size={18} />
                   Feedback / report issue
                 </button>
+                <Link
+                  href="/about"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <Info size={18} />
+                  About Cindr
+                </Link>
                 {isSignedIn && (
                   <button
                     type="button"
@@ -226,9 +232,111 @@ export default function AppHeader() {
           </nav>
         )}
         {!isLanding && (
-          <div ref={mobileProfileRef} className="relative flex items-center gap-2 lg:hidden">
-            {profileOpen && (
-              <div className="absolute right-0 top-[3rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
+          <nav className="flex items-center gap-1.5 lg:hidden" aria-label="Mobile navigation">
+            <Link
+              href="/discover"
+              className={`grid h-9 w-9 place-items-center rounded-xl transition-colors ${
+                pathname.startsWith("/discover")
+                  ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)]"
+                  : "text-[var(--muted)] hover:bg-white/[0.06] hover:text-white"
+              }`}
+              aria-label="Discover"
+            >
+              <FilmSlate
+                size={20}
+                weight={pathname.startsWith("/discover") ? "fill" : "regular"}
+                className={
+                  pathname.startsWith("/discover")
+                    ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]"
+                    : ""
+                }
+              />
+            </Link>
+
+            <div ref={mobilePrefsRef} className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setPrefsOpen((current) => !current);
+                  setProfileOpen(false);
+                }}
+                className={`grid h-9 w-9 place-items-center rounded-xl transition-colors ${
+                  pathname.startsWith("/onboarding")
+                    ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)]"
+                    : "text-[var(--muted)] hover:bg-white/[0.06] hover:text-white"
+                }`}
+                aria-label="Open preferences menu"
+                aria-expanded={prefsOpen}
+                aria-haspopup="menu"
+              >
+                <SlidersHorizontal
+                  size={20}
+                  weight={pathname.startsWith("/onboarding") ? "fill" : "regular"}
+                  className={
+                    pathname.startsWith("/onboarding")
+                      ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]"
+                      : ""
+                  }
+                />
+              </button>
+              {prefsOpen && (
+                <div className="absolute right-0 top-[3rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                  <Link
+                    href="/onboarding?mode=quiz"
+                    onClick={() => setPrefsOpen(false)}
+                    className="block rounded-xl px-3 py-3 text-left transition-colors hover:bg-white/[0.06]"
+                  >
+                    <span className="block text-sm font-semibold text-white/85">
+                      Refresh taste profile
+                    </span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-[var(--muted)]">
+                      Languages, content, moods.
+                    </span>
+                  </Link>
+                  <Link
+                    href="/onboarding?mode=advanced"
+                    onClick={() => setPrefsOpen(false)}
+                    className="block rounded-xl px-3 py-3 text-left transition-colors hover:bg-white/[0.06]"
+                  >
+                    <span className="block text-sm font-semibold text-white/85">
+                      Advanced filters
+                    </span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-[var(--muted)]">
+                      Years, genres, actors, directors.
+                    </span>
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            <div ref={mobileProfileRef} className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileOpen((current) => !current);
+                  setPrefsOpen(false);
+                }}
+                className={`grid h-9 w-9 place-items-center rounded-xl transition-colors ${
+                  mobileProfileActive
+                    ? "bg-[var(--color-cindr)]/10 text-[var(--color-cindr)]"
+                    : "text-[var(--muted)] hover:bg-white/[0.06] hover:text-white"
+                }`}
+                aria-label="Open profile menu"
+                aria-expanded={profileOpen}
+                aria-haspopup="menu"
+              >
+                <UserCircle
+                  size={21}
+                  weight={mobileProfileActive ? "fill" : "regular"}
+                  className={
+                    mobileProfileActive
+                      ? "drop-shadow-[0_0_8px_rgba(216,90,48,0.65)]"
+                      : ""
+                  }
+                />
+              </button>
+              {profileOpen && (
+                <div className="absolute right-0 top-[3rem] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111015]/95 p-2 shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-md">
                 <Link
                   href="/profile"
                   onClick={() => setProfileOpen(false)}
@@ -238,12 +346,12 @@ export default function AppHeader() {
                   Profile
                 </Link>
                 <Link
-                  href="/about"
+                  href="/watchlist"
                   onClick={() => setProfileOpen(false)}
                   className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white"
                 >
-                  <Info size={18} />
-                  About Cindr
+                  <BookmarkSimple size={18} />
+                  Watchlist
                 </Link>
                 <button
                   type="button"
@@ -253,6 +361,14 @@ export default function AppHeader() {
                   <ChatCircleText size={18} />
                   Feedback / report issue
                 </button>
+                <Link
+                  href="/about"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <Info size={18} />
+                  About Cindr
+                </Link>
                 {isSignedIn ? (
                   <button
                     type="button"
@@ -283,6 +399,7 @@ export default function AppHeader() {
               </div>
             )}
           </div>
+          </nav>
         )}
       </header>
       {feedbackOpen && (

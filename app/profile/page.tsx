@@ -13,7 +13,6 @@ import {
 import { buildCloudinaryAvatarUrl } from "@/lib/cloudinary/avatar";
 import type { FeedbackCategory, Profile, ProfileDashboardData } from "@/types/user";
 import AppHeader from "@/components/layout/AppHeader";
-import MobileNav from "@/components/layout/MobileNav";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
@@ -315,7 +314,6 @@ export default function ProfilePage() {
             </div>
           </div>
         </main>
-        <MobileNav />
       </div>
     );
   }
@@ -335,7 +333,7 @@ export default function ProfilePage() {
     <div className="min-h-screen flex flex-col relative overflow-hidden">
       <CinematicBackdrop density="subtle" />
       <AppHeader />
-      <main className="flex-1 pt-20 pb-24 md:pb-8 px-4 max-w-md mx-auto w-full relative z-10">
+      <main className="flex-1 pt-20 pb-10 md:pb-8 px-4 max-w-md mx-auto w-full relative z-10">
         <div className="rounded-[2rem] border border-white/10 bg-[#111015]/82 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
         <Link
           href="/discover"
@@ -547,7 +545,6 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
-      <MobileNav />
     </div>
   );
 }
