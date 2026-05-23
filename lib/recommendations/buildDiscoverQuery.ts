@@ -5,6 +5,15 @@ import {
   TV_MOOD_TO_GENRES,
 } from "@/lib/constants/quiz";
 
+// TMDB keyword IDs that map anime moods more precisely than genres alone.
+// These are used as soft filters alongside the genre requirement.
+const ANIME_MOOD_TO_KEYWORDS: Record<string, number[]> = {
+  anime_fantasy: [255241],  // isekai
+  anime_action:  [1613],    // shonen
+  anime_sol:     [210024],  // slice of life
+  anime_thriller: [9715],   // psychological thriller
+};
+
 export interface DiscoverParams {
   languages: string[];
   moods: string[];
@@ -98,11 +107,20 @@ function setGenreFilters(q: URLSearchParams, params: DiscoverParams): void {
   }
 
   if (params.isAnime) {
-    const animeSubGenres = Array.from(genreIds).filter((id) => id !== 16);
-    q.set(
-      "with_genres",
-      animeSubGenres.length > 0 ? `16,${animeSubGenres.join("|")}` : "16"
-    );
+    // Always require genre 16 (Animation) + Japanese language (set in caller).
+    // Sub-genres from moods become keyword filters instead of AND-genre constraints,
+    // because TMDB's genre tagging for anime is inconsistent — many isekai / slice-of-life
+    // shows only carry genre 16 and would be dropped by a strict AND filter.
+    q.set("with_genres", "16");
+
+    // Inject mood-specific TMDB keywords for better precision
+    const keywordIds = new Set<number>();
+    for (const mood of params.moods) {
+      ANIME_MOOD_TO_KEYWORDS[mood]?.forEach((id) => keywordIds.add(id));
+    }
+    if (keywordIds.size > 0) {
+      q.set("with_keywords", Array.from(keywordIds).join("|"));
+    }
     return;
   }
 

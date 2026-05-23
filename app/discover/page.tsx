@@ -1,6 +1,7 @@
 "use client";
 
 import { type CSSProperties, useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   getGuestState,
@@ -246,6 +247,7 @@ function ModeToggle({
 }
 
 export default function DiscoverPage() {
+  const router = useRouter();
   const [preferences, setPreferences] = useState<UserPreferences>(
     DEFAULT_DISCOVER_PREFERENCES
   );
@@ -492,13 +494,24 @@ export default function DiscoverPage() {
 
     (async () => {
       // Load preferences, liked IDs, and remote taste fingerprint in parallel
-      const [{ preferences: effectivePreferences }, remoteIds, remoteFingerprint] =
+      const [{ preferences: effectivePreferences, onboardingComplete }, remoteIds, remoteFingerprint] =
         await Promise.all([
           getEffectivePreferences(),
           getLikedTmdbIds(),
           loadTasteFingerprint(),
         ]);
       if (cancelled) return;
+
+      // Fresh account with no onboarding done — send them to set up taste
+      const isEmptyPrefs =
+        effectivePreferences.contentTypes.length === 0 &&
+        effectivePreferences.languages.length === 0 &&
+        effectivePreferences.genres.length === 0 &&
+        effectivePreferences.moods.length === 0;
+      if (!onboardingComplete && isEmptyPrefs) {
+        router.replace("/onboarding");
+        return;
+      }
 
       // Merge remote liked IDs into the local set
       if (remoteIds.length > 0) {
