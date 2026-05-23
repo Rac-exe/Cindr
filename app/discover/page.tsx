@@ -201,8 +201,8 @@ function ModeToggle({
   const [hovered, setHovered] = useState<DiscoverMode | null>(null);
 
   return (
-    <div className="mb-2 flex w-full max-w-[440px] flex-col items-center">
-      <div className="grid w-40 grid-cols-2 rounded-full border border-white/10 bg-[#111015]/72 p-0.5 shadow-[0_12px_34px_rgba(0,0,0,0.22)] backdrop-blur-md">
+    <div className="mb-3 flex w-full max-w-[440px] shrink-0 flex-col items-center pt-1">
+      <div className="grid min-h-8 w-40 grid-cols-2 rounded-full border border-white/10 bg-[#111015]/72 p-0.5 shadow-[0_12px_34px_rgba(0,0,0,0.22)] backdrop-blur-md">
         {(["taste", "random"] as DiscoverMode[]).map((m) => (
           <button
             key={m}
@@ -211,7 +211,7 @@ function ModeToggle({
             disabled={disabled}
             onMouseEnter={() => setHovered(m)}
             onMouseLeave={() => setHovered(null)}
-            className={`rounded-full px-2.5 py-1.5 text-[10px] font-bold capitalize tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+            className={`rounded-full px-2.5 py-1.5 text-[10px] font-bold capitalize leading-none tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
               mode === m
                 ? "bg-[var(--color-cindr)] text-white shadow-[0_0_18px_rgba(216,90,48,0.28)]"
                 : "text-white/48 hover:bg-white/[0.05] hover:text-white"
