@@ -32,6 +32,7 @@ import TrailerDialog from "@/components/discover/TrailerDialog";
 import AppHeader from "@/components/layout/AppHeader";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 import { prewarmTrailers } from "@/lib/client/trailerCache";
+import { recordSwipe } from "@/lib/client/swipeStats";
 import {
   loadTasteProfile,
   saveTasteProfile,
@@ -761,6 +762,7 @@ export default function DiscoverPage() {
     preview: MovieCardData;
     initialInteraction?: { liked: boolean };
   }) => {
+    recordSwipe("up");
     if (!modalHistoryPushed.current) {
       window.history.pushState({ cindrTrailer: true }, "", window.location.href);
       modalHistoryPushed.current = true;
@@ -769,6 +771,7 @@ export default function DiscoverPage() {
   }, []);
 
   function handleSwipeStart(id: number, direction: "left" | "right") {
+    recordSwipe(direction);
     addSwipedId(id);
     const card = cards.find((c) => c.id === id);
     if (card) {
