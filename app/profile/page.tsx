@@ -12,8 +12,11 @@ import {
   submitFeedbackReport,
   updateProfileAvatar,
 } from "@/lib/supabase/core";
+import { getUserBadges } from "@/lib/supabase/social";
+import { BADGE_DEFINITIONS } from "@/lib/constants/badges";
 import { buildCloudinaryAvatarUrl } from "@/lib/cloudinary/avatar";
 import type { FeedbackCategory, Profile, ProfileDashboardData } from "@/types/user";
+import type { UserBadge } from "@/types/social";
 import AppHeader from "@/components/layout/AppHeader";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
@@ -38,6 +41,7 @@ export default function ProfilePage() {
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [feedbackStatus, setFeedbackStatus] = useState("");
   const [clearTasteOpen, setClearTasteOpen] = useState(false);
+  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -47,12 +51,14 @@ export default function ProfilePage() {
       setUser(currentUser);
 
       if (currentUser) {
-        const [p, dashboardData] = await Promise.all([
+        const [p, dashboardData, badges] = await Promise.all([
           ensureProfileFromAuth(),
           getProfileDashboardData(),
+          getUserBadges(currentUser.id),
         ]);
         setProfile(p);
         setDashboard(dashboardData);
+        setUserBadges(badges);
       }
       setLoading(false);
     })();
@@ -461,6 +467,9 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Badges shelf */}
+        <BadgesShelf userBadges={userBadges} />
+
         <div className="flex flex-col gap-3">
           <button
             type="button"
@@ -590,6 +599,50 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Badges shelf ──────────────────────────────────────────────────────────────
+
+function BadgesShelf({ userBadges }: { userBadges: UserBadge[] }) {
+  const earnedIds = new Set(userBadges.map((b) => b.badge_id));
+  const allBadges = Object.values(BADGE_DEFINITIONS);
+
+  return (
+    <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+      <p className="mb-3 text-sm text-[var(--muted)]">
+        Badges{" "}
+        <span className="ml-1 rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/60">
+          {earnedIds.size}/{allBadges.length}
+        </span>
+      </p>
+      <div className="grid grid-cols-5 gap-2">
+        {allBadges.map((def) => {
+          const earned = earnedIds.has(def.id);
+          return (
+            <div
+              key={def.id}
+              title={earned ? `${def.label}: ${def.description}` : `Locked — ${def.description}`}
+              className={`group relative flex flex-col items-center gap-1 rounded-xl p-2 transition-colors ${
+                earned
+                  ? "bg-white/[0.07] hover:bg-white/[0.1]"
+                  : "opacity-35 grayscale"
+              }`}
+            >
+              <span className="text-xl leading-none">{def.icon}</span>
+              <span className="max-w-full truncate text-center text-[9px] font-medium leading-tight text-white/60">
+                {def.label}
+              </span>
+              {!earned && (
+                <span className="absolute right-1 top-1 text-[8px] leading-none text-white/30">
+                  🔒
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
