@@ -5,7 +5,13 @@ import { Users, ArrowRight } from "@phosphor-icons/react";
 import Link from "next/link";
 import AppHeader from "@/components/layout/AppHeader";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
+import { supabase } from "@/lib/supabase/client";
 import type { Community } from "@/types/social";
+
+async function getAuthHeader() {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ? `Bearer ${session.access_token}` : undefined;
+}
 
 export default function CommunitiesPage() {
   const [communities, setCommunities] = useState<Community[]>([]);
@@ -14,7 +20,10 @@ export default function CommunitiesPage() {
 
   const fetchCommunities = useCallback(async () => {
     try {
-      const res = await fetch("/api/communities");
+      const auth = await getAuthHeader();
+      const res = await fetch("/api/communities", {
+        headers: auth ? { Authorization: auth } : {},
+      });
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setCommunities(data.communities ?? []);
@@ -32,9 +41,10 @@ export default function CommunitiesPage() {
   async function handleJoinToggle(community: Community) {
     setJoining(community.id);
     try {
+      const auth = await getAuthHeader();
       await fetch(`/api/communities/${community.id}/join`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(auth ? { Authorization: auth } : {}) },
         body: JSON.stringify({ action: community.is_member ? "leave" : "join" }),
       });
       await fetchCommunities();

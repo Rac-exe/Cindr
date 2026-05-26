@@ -7,7 +7,13 @@ import Link from "next/link";
 import Image from "next/image";
 import AppHeader from "@/components/layout/AppHeader";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
+import { supabase } from "@/lib/supabase/client";
 import type { Community, CommunityMember } from "@/types/social";
+
+async function getAuthHeader() {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ? `Bearer ${session.access_token}` : undefined;
+}
 
 export default function CommunityDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -21,12 +27,15 @@ export default function CommunityDetailPage() {
 
   // Resolve community by slug from the list endpoint
   useEffect(() => {
-    fetch("/api/communities")
-      .then((r) => r.json())
-      .then((data) => {
-        const found = (data.communities as Community[])?.find((c) => c.slug === slug);
-        setCommunity(found ?? null);
+    (async () => {
+      const auth = await getAuthHeader();
+      const r = await fetch("/api/communities", {
+        headers: auth ? { Authorization: auth } : {},
       });
+      const data = await r.json();
+      const found = (data.communities as Community[])?.find((c) => c.slug === slug);
+      setCommunity(found ?? null);
+    })();
   }, [slug]);
 
   const fetchMembers = useCallback(
@@ -58,9 +67,10 @@ export default function CommunityDetailPage() {
   async function handleAddFriend(userId: string) {
     setRequesting(userId);
     try {
+      const auth = await getAuthHeader();
       await fetch("/api/friends", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(auth ? { Authorization: auth } : {}) },
         body: JSON.stringify({ addressee_id: userId }),
       });
     } finally {

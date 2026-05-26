@@ -1,58 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import { respondToRequest, removeFriend } from "@/lib/supabase/social";
+import { createClient } from "@supabase/supabase-js";
 
-function createSupabaseServerClient() {
-  const cookieStore = cookies();
-  return createServerClient(
+function serviceClient() {
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll(); },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {}
-        },
-      },
-    }
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
   );
 }
 
+async function requireUser(req: NextRequest) {
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) return null;
+  const anonClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false } }
+  );
+  const { data: { user } } = await anonClient.auth.getUser(token);
+  return user ?? null;
+}
+
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 /**
  * PATCH /api/friends/[id]
  * Body: { accept: boolean }  → accept or decline a pending request
- * Body: { remove: true }     → unfriend (delete accepted friendship)
+ * Body: { remove: true }     → unfriend
  */
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
-  const supabase = createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { id } = await params;
+  const user = await requireUser(req);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await req.json().catch(() => ({}));
+  const supabase = serviceClient();
 
   try {
     if (body.remove === true) {
-      await removeFriend(params.id);
+      const { error } = await supabase
+        .from("friendships")
+        .delete()
+        .eq("id", id);
+      if (error) throw new Error(error.message);
     } else {
-      await respondToRequest(params.id, body.accept === true);
+      const { error } = await supabase
+        .from("friendships")
+        .update({ status: body.accept === true ? "accepted" : "declined" })
+        .eq("id", id)
+        .eq("addressee_id", user.id);
+      if (error) throw new Error(error.message);
     }
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error(`[PATCH /api/friends/${params.id}]`, err);
+    console.error(`[PATCH /api/friends/${id}]`, err);
     return NextResponse.json({ error: "Failed to update friendship" }, { status: 500 });
   }
 }

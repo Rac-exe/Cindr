@@ -6,7 +6,13 @@ import Image from "next/image";
 import Link from "next/link";
 import AppHeader from "@/components/layout/AppHeader";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
+import { supabase } from "@/lib/supabase/client";
 import type { FriendProfile } from "@/types/social";
+
+async function getAuthHeader() {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ? `Bearer ${session.access_token}` : undefined;
+}
 
 type Tab = "friends" | "pending";
 
@@ -21,7 +27,11 @@ export default function FriendsPage() {
   const fetchFriends = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/friends");
+      const auth = await getAuthHeader();
+      if (!auth) { setLoading(false); return; }
+      const res = await fetch("/api/friends", {
+        headers: { Authorization: auth },
+      });
       if (!res.ok) return;
       const data = await res.json();
       setFriends(data.friends ?? []);
@@ -38,9 +48,10 @@ export default function FriendsPage() {
   async function handleRespond(friendshipId: string, accept: boolean) {
     setActioning(friendshipId);
     try {
+      const auth = await getAuthHeader();
       await fetch(`/api/friends/${friendshipId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(auth ? { Authorization: auth } : {}) },
         body: JSON.stringify({ accept }),
       });
       await fetchFriends();
@@ -52,9 +63,10 @@ export default function FriendsPage() {
   async function handleRemove(friendshipId: string) {
     setActioning(friendshipId);
     try {
+      const auth = await getAuthHeader();
       await fetch(`/api/friends/${friendshipId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(auth ? { Authorization: auth } : {}) },
         body: JSON.stringify({ remove: true }),
       });
       await fetchFriends();
