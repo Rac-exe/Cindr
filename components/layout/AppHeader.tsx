@@ -12,6 +12,8 @@ import {
   SignOut,
   SlidersHorizontal,
   UserCircle,
+  Users,
+  UsersThree,
   type Icon,
 } from "@phosphor-icons/react";
 import CindrLogo from "@/components/layout/CindrLogo";
@@ -193,6 +195,12 @@ export default function AppHeader() {
             currentPath={pathname}
             icon={BookmarkSimple}
           />
+          <NavLink
+            href="/communities"
+            label="Communities"
+            currentPath={pathname}
+            icon={UsersThree}
+          />
           <div ref={profileRef} className="relative hidden md:block">
             <button
               type="button"
@@ -217,6 +225,14 @@ export default function AppHeader() {
                 >
                   <UserCircle size={18} />
                   Profile
+                </Link>
+                <Link
+                  href="/friends"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <Users size={18} />
+                  Friends
                 </Link>
                 <button
                   type="button"
@@ -338,6 +354,22 @@ export default function AppHeader() {
                 >
                   <UserCircle size={18} />
                   Profile
+                </Link>
+                <Link
+                  href="/friends"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <Users size={18} />
+                  Friends
+                </Link>
+                <Link
+                  href="/communities"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <UsersThree size={18} />
+                  Communities
                 </Link>
                 <Link
                   href="/watchlist"
