@@ -33,6 +33,8 @@ import AppHeader from "@/components/layout/AppHeader";
 import CinematicBackdrop from "@/components/layout/CinematicBackdrop";
 import { prewarmTrailers } from "@/lib/client/trailerCache";
 import { recordSwipe } from "@/lib/client/swipeStats";
+import { awardBadge } from "@/lib/supabase/social";
+import { SWIPE_BADGE_MILESTONES } from "@/lib/constants/badges";
 import {
   loadTasteProfile,
   saveTasteProfile,
@@ -803,6 +805,28 @@ export default function DiscoverPage() {
     tasteProfileRef.current = updatedProfile;
     saveTasteProfile(updatedProfile);
     void saveTasteFingerprint(updatedProfile);
+
+    // Badge checks — swipe milestones
+    const swipeCount = updatedProfile.swipeCount;
+    for (const { count, badgeId } of SWIPE_BADGE_MILESTONES) {
+      if (swipeCount === count) {
+        void awardBadge(badgeId);
+        break;
+      }
+    }
+
+    // Badge: first like
+    if (liked && updatedProfile.likeCount === 1) {
+      void awardBadge("first_like");
+    }
+    // Badge: 10 likes
+    if (liked && updatedProfile.likeCount === 10) {
+      void awardBadge("liked_10");
+    }
+    // Badge: hidden gem — liked a movie with fewer than 1,000 votes
+    if (liked && card?.voteCount !== undefined && card.voteCount < 1000) {
+      void awardBadge("hidden_gem");
+    }
 
     if (liked) {
       // Background keyword enrichment — fetch TMDB keywords for liked movie
