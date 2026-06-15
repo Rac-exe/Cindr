@@ -11,7 +11,7 @@
 
 <br/>
 
-[![Landing Page](https://img.shields.io/badge/Showcase-%E2%86%92-D85A30?style=for-the-badge&labelColor=111111)](https://mrraccooon.github.io/Cindr)
+[![Landing Page](https://img.shields.io/badge/Showcase-%E2%86%92-D85A30?style=for-the-badge&labelColor=111111)](https://rac-exe.github.io/Cindr)
 &nbsp;&nbsp;
 [![Live App](https://img.shields.io/badge/Open%20Cindr-%E2%86%92-D85A30?style=for-the-badge&labelColor=111111)](https://cindr-red.vercel.app)
 &nbsp;&nbsp;
@@ -65,6 +65,8 @@ Flip to **Random** any time to break the pattern entirely.
 - **CindrSense** - learns from every swipe. Gets personal fast.
 - **Taste / Random** - your feed or pure chaos. You pick.
 - **Liked, Favourited, Watched** - three lists, synced to your account
+- **Communities** - genre rooms to find people with the same taste
+- **Friends** - connect with people you meet in communities
 - **No account required** - full discovery without signing in; create one to keep your history
 - **Mobile-first** - built for phones, works everywhere
 
@@ -72,7 +74,7 @@ Flip to **Random** any time to break the pattern entirely.
 
 ## Try it
 
-Showcase: **[mrraccooon.github.io/Cindr](https://mrraccooon.github.io/Cindr)**
+Showcase: **[rac-exe.github.io/Cindr](https://rac-exe.github.io/Cindr)**
 
 App: **[cindr-red.vercel.app](https://cindr-red.vercel.app)**
 
