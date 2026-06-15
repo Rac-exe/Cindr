@@ -27,10 +27,11 @@ Cindr turns discovery into a focused flow:
 - Watch providers surfaced for India first, with US fallback.
 - Supabase email/password auth with guest preference syncing after login/signup.
 - Per-user preferences, profile data, saved titles, list flags, ratings, and feedback reports.
-- Watchlist views for liked, watchlisted, favourite, and watched titles.
+- Watchlist views for liked, favourite, and watched titles with watch reaction (enjoyed/disliked).
 - Shareable movie and TV pages at `/m/[type]/[id]`.
 - Cloudinary-backed profile avatars with signed uploads.
-- Feedback / issue report modal for signed-in users.
+- Feedback / issue report modal for signed-in and guest users.
+- Social layer: friends, communities, and earned badges.
 - Cinematic dark UI with Cindr orange accents, motion, and mobile navigation.
 
 ## Screenshots
@@ -102,6 +103,7 @@ The app reads the following variables from `.env.local`:
 - `NEXT_PUBLIC_CLOUDINARY_API_KEY` - Cloudinary API key.
 - `CLOUDINARY_API_SECRET` - Cloudinary API secret. Server-only. Never expose it client-side.
 - `NEXT_PUBLIC_CLOUDINARY_UPLOAD_FOLDER` - Optional upload folder. Example: `cindr/profiles`.
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key. Server-only. Used by API routes that need elevated database access. Never expose it client-side.
 
 TMDB auth requires one of `TMDB_READ_ACCESS_TOKEN` or `TMDB_API_KEY`.
 
@@ -123,6 +125,17 @@ Current migrations:
 - `0005_advanced_preferences.sql` - year range and people preferences.
 - `0006_profile_avatar.sql` - Cloudinary avatar fields on profiles.
 - `0007_feedback_reports.sql` - feedback and issue report table with RLS.
+- `0008_media_trailer_registry.sql` - permanent trailer registry keyed by TMDB media.
+- `0009_discovery_mode_preferences.sql` - discovery mode and explicit quiz filter preferences.
+- `0010_guest_feedback_reports.sql` - allows guests to submit feedback reports.
+- `0011_cindr_sense.sql` - CindrSense taste fingerprint persistence per user.
+- `0012_remove_watchlisted_flag.sql` - removes obsolete standalone watchlist flag; liked, favourite, and watched are the saved buckets.
+- `0013_swipe_stats.sql` - daily time-series swipe count table.
+- `0014_swipe_stats_functions.sql` - atomic upsert function for daily swipe stats.
+- `0015_friendships.sql` - friendships table with request/accept/decline flow.
+- `0016_communities.sql` - communities and community membership tables.
+- `0017_user_badges.sql` - user badges (earned achievements).
+- `0018_watchlist_status_states.sql` - watch reaction column (enjoyed/disliked) on saved movies.
 
 You can apply them through the Supabase SQL Editor. If you use the Supabase CLI in your workflow, apply the same migrations from the `supabase/migrations/` directory.
 
@@ -203,24 +216,30 @@ After setting up Supabase, TMDB, and Cloudinary, run through this flow:
 - Open `/watchlist` and confirm the title appears under the expected tabs.
 - Use share from the modal or watchlist and confirm the generated `/m/[type]/[id]` page loads.
 - Upload and remove a profile photo from `/profile`.
-- Submit feedback or an issue from the landing/profile menu.
+- Open `/communities`, join a community, and verify member count updates.
+- Open `/friends` and send a friend request to another user.
+- Submit feedback or an issue from the landing/profile menu (signed in and as guest).
 - Run `npm run lint` before handing off changes.
 
 ## Project Structure
 
-```text
+```
 app/
   api/
     cloudinary/sign-profile-upload/  Signed avatar upload endpoint
+    communities/                     List communities, join/leave, paginated members
+    friends/                         Send, accept, decline, and list friend requests
     tmdb/discover/                   Preference-aware discovery endpoint
     tmdb/movie/[id]/                 Movie and TV details endpoint
     tmdb/search-person/              Actor/director search endpoint
   auth/                              Login and signup screens
+  communities/                       Community list and community detail pages
   discover/                          Swipe deck experience
+  friends/                           Friends list and pending requests
   m/[type]/[id]/                     Shareable movie and TV pages
   onboarding/                        Quiz and advanced preferences
-  profile/                           Profile, DOB, avatar, preferences
-  watchlist/                         Liked/watchlist/favourite/watched views
+  profile/                           Profile, DOB, avatar, preferences, taste setup
+  watchlist/                         Liked/favourite/watched views
 
 components/
   discover/                          Swipe deck, actions, trailer dialog
@@ -230,12 +249,12 @@ lib/
   cloudinary/                        Avatar URL helpers
   constants/                         Genres, languages, quiz mappings
   guest/                             Guest localStorage persistence
-  recommendations/                   TMDB discover query builders
-  supabase/                          Supabase client and data helpers
+  recommendations/                   TMDB discover query builders and CindrSense scoring
+  supabase/                          Supabase client, data helpers, and social helpers
   tmdb/                              TMDB fetch client
 
 supabase/migrations/                 Database schema and RLS migrations
-types/                               Shared movie and user types
+types/                               Shared movie, user, and social types
 ```
 
 ## Data Model Overview
@@ -243,9 +262,16 @@ types/                               Shared movie and user types
 Supabase currently stores:
 
 - `profiles` - display name, date of birth, adult flag, Cloudinary avatar metadata.
-- `user_preferences` - languages, genres, moods, content types, year range, people filters, onboarding state.
-- `saved_movies` - TMDB id, media type, title, poster, liked/watchlisted/favourite/watched flags, and rating.
-- `feedback_reports` - signed-in user feedback and issue reports.
+- `user_preferences` - languages, genres, moods, content types, year range, people filters, discovery mode, onboarding state.
+- `saved_movies` - TMDB id, media type, title, poster, liked/favourite/watched flags, rating, and watch reaction.
+- `feedback_reports` - signed-in and guest feedback and issue reports.
+- `media_trailer_registry` - permanent trailer URL registry keyed by TMDB media id and type.
+- `cindr_sense_profiles` - per-user taste fingerprint for personalised recommendations.
+- `swipe_stats_daily` - daily swipe count time-series for analytics.
+- `friendships` - friend request and accepted friendship records between users.
+- `communities` - genre-tagged community rooms with member counts and accent colours.
+- `community_members` - join table linking users to communities.
+- `user_badges` - earned achievement badges per user.
 
 Guest users keep preferences and swiped IDs in localStorage. When they sign up or log in, preferences sync into Supabase.
 
