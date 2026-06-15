@@ -127,7 +127,7 @@ export default function AppHeader() {
 
         {pathname === "/about" && (
           <a
-            href="https://github.com/MrRaccooon/Cindr"
+            href="https://github.com/Rac-exe/Cindr"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="GitHub"

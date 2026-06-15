@@ -10,7 +10,7 @@ import AppHeader from "@/components/layout/AppHeader";
 const HOW_TO_USE = ["Set your taste", "Swipe picks", "Watch trailers", "Save what hits"];
 
 const SOCIAL_LINKS = [
-  { label: "GitHub", href: "https://github.com/MrRaccooon", icon: GithubLogo },
+  { label: "GitHub", href: "https://github.com/Rac-exe", icon: GithubLogo },
   { label: "LinkedIn", href: "https://www.linkedin.com/in/prabhat-bajpai", icon: LinkedinLogo },
   { label: "X", href: "https://x.com/PrabhatAstrix", icon: XLogo },
   { label: "Instagram", href: "https://instagram.com/prabhat.whynot", icon: InstagramLogo },
